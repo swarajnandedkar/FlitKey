@@ -1,198 +1,171 @@
 # TypeFlow
 
-TypeFlow is a Linux desktop text expander for creating reusable snippets and inserting them with typed keywords, hotkeys, or a searchable quick-insert picker.
+TypeFlow is a lightweight, open-source Linux desktop text expander designed to create reusable text snippets and insert them instantly using typed keywords, global hotkeys, or a searchable quick-insert picker. 
 
-It is built with Python and PyQt6, stores data locally as JSON, integrates with the system tray, and adapts its runtime behavior for X11 and Wayland sessions.
+Built with **Python** and **PyQt6**, TypeFlow operates completely locally and dynamically adjusts its runtime behavior based on whether you are running an X11 or Wayland desktop session.
 
-## Features
+---
 
-- Snippet manager with labels, trigger types, enabled state, and expansion preview
-- Keyword snippets for typed trigger expansion on supported X11 desktops
-- Hotkey snippets on supported X11 desktops
-- Searchable quick-insert picker from the app window or tray menu
-- System tray controls for opening the app, quick insert, pause/resume, and quit
-- Launch-at-login support through XDG autostart desktop entries
-- Optional start-minimized behavior
-- Case-sensitive or case-insensitive keyword matching
-- Placeholder rendering for `{{date}}`, `{{time}}`, and `{{datetime}}`
-- Local JSON config with automatic migration from the legacy `linux-text-expander` config path
+## Quick Reference & Tech Specs
 
-## Platform Support
+| Specification | Details |
+| --- | --- |
+| **Language** | Python 3.10+ |
+| **GUI Framework** | PyQt6 |
+| **Compatible Platforms** | Linux (Ubuntu, Debian, Fedora, Arch, etc.) |
+| **Supported Displays** | X11 (Native text injection & hotkeys), Wayland (Clipboard fallback) |
+| **Dependencies** | `python3-pyqt6`, `xdotool`, `xinput`, `x11-xserver-utils` (for X11) |
+| **Configuration Path** | `~/.config/typeflow/config.json` |
+| **License** | [MIT License](LICENSE) |
+| **Current Version** | `0.2.0` |
 
-TypeFlow chooses its runtime backend from the current Linux desktop session.
+---
 
-| Session | Typed keyword expansion | Global hotkeys | Quick insert | Notes |
-| --- | --- | --- | --- | --- |
-| X11 | Yes | Yes | Yes | Requires `xinput`, `xmodmap`, and `xdotool` |
-| Wayland | No | No | Clipboard fallback | Universal text injection is intentionally not implemented for Wayland in this backend |
+## Key Features
 
-On Wayland, the app still opens, manages snippets, shows tray/status information, and supports quick insert by copying the selected snippet text to the clipboard.
+*   **Snippet Manager**: A clean PyQt6 interface to manage, preview, and toggle snippet triggers.
+*   **Live Search Filter**: Real-time filtering in the main snippet manager to find snippets by label, type, keyword, or preview text.
+*   **X11 Keyword Triggers**: Automatically detects typed keywords and expands them in place.
+*   **X11 Global Hotkeys**: Triggers expansions via custom key combinations (e.g. `Ctrl+Alt+A`).
+*   **Wayland Clipboard Fallback**: Copies snippets to the system clipboard and notifies the user if native keyboard simulation is restricted.
+*   **System Tray Integration**: Access quick insert, pause/resume, or settings from a dedicated tray menu.
+*   **Interactive Snippet Picker**: A searchable overlay window to select and insert snippets on demand.
+*   **Dynamic Placeholders**: Expand variables like date, time, clipboard data, or specify cursor placement after expansion.
 
-## Requirements
+---
 
-- Linux desktop environment
-- Python 3.10 or newer
-- PyQt6
-- For full X11 expansion support: `xdotool`, `xinput`, and `x11-xserver-utils` for `xmodmap`
+## Platform Support Matrix
 
-On Debian/Ubuntu-based systems:
+TypeFlow automatically probes your current desktop session and selects the appropriate runtime backend.
+
+| Feature / Session | X11 Desktop | Wayland Desktop | Technical Mechanism |
+| --- | --- | --- | --- |
+| **Typed Keyword Expansion** | Yes | No | Listens to root raw inputs via `xinput test-xi2` |
+| **Global Hotkeys** | Yes | No | Simulates key sequences using `xdotool` |
+| **Searchable Picker Insertion**| Yes | Clipboard Fallback | Pastes text or copies to clipboard via `QClipboard` |
+| **System Tray controls** | Yes | Yes | PyQt6 QSystemTrayIcon |
+| **Autostart at Login** | Yes | Yes | XDG Autostart `.desktop` entry |
+
+---
+
+## System Requirements & Installation
+
+### Prerequisite Packages (Ubuntu/Debian)
+
+TypeFlow requires Python 3.10 or newer and specific X11 utility tools for expansion triggers.
 
 ```bash
 sudo apt update
 sudo apt install python3 python3-pyqt6 xdotool xinput x11-xserver-utils
 ```
 
-For building the Debian package, also install:
-
+For building the Debian package locally, you also need:
 ```bash
 sudo apt install desktop-file-utils dpkg
 ```
 
-## Run From Source
+---
 
-Clone the repository and start the app:
+## Installation & Running
 
-```bash
-git clone <repository-url>
-cd typeflow
-python3 run.py
-```
+### Method 1: Install via Debian Package (Recommended)
 
-Start minimized, respecting the in-app "Start minimized to tray" setting:
+1. Build the Debian package:
+   ```bash
+   python3 build_deb.py
+   ```
+2. Install the generated package:
+   ```bash
+   sudo apt install ./dist/typeflow_0.2.0_all.deb
+   ```
+3. Run the application:
+   ```bash
+   typeflow
+   ```
 
-```bash
-python3 run.py --minimized
-```
+*The package installs the app files under `/opt/typeflow`, a binary launcher at `/usr/bin/typeflow`, a desktop entry at `/usr/share/applications/typeflow.desktop`, and icons.*
 
-Install or refresh the local desktop launcher:
+### Method 2: Run from Source
 
-```bash
-python3 install.py
-```
+1. Clone and enter the directory:
+   ```bash
+   git clone https://github.com/swarajnandedkar/TypeFlow.git
+   cd TypeFlow
+   ```
+2. Run the application entry point:
+   ```bash
+   python3 run.py
+   ```
+3. Start minimized to the system tray:
+   ```bash
+   python3 run.py --minimized
+   ```
+4. Create a local desktop launcher shortcut:
+   ```bash
+   python3 install.py
+   ```
 
-This writes a desktop entry to:
+---
 
-```text
-~/.local/share/applications/typeflow.desktop
-```
+## Dynamic Placeholders Guide
 
-## Install From Debian Package
+TypeFlow renders dynamic placeholders at the time of expansion. Use the following tokens in your snippet expansion text:
 
-Build the package:
+| Token | Replacement Value | Example Output |
+| --- | --- | --- |
+| `{{date}}` | Current date (YYYY-MM-DD) | `2026-07-12` |
+| `{{time}}` | Current time (HH:MM) | `14:30` |
+| `{{datetime}}` | Current date and time | `2026-07-12 14:30` |
+| `{{clipboard}}` | Injects current clipboard text | *Contents of system clipboard* |
+| `{{cursor}}` | Positions the text cursor here after pasting | *Removes tag and moves cursor left* |
 
-```bash
-python3 build_deb.py
-```
+*Note: On Wayland, the `{{cursor}}` tag is stripped from the text before copying to the clipboard, and `{{clipboard}}` inserts the text currently held in your clipboard buffer.*
 
-Install the generated package:
+---
 
-```bash
-sudo apt install ./dist/typeflow_0.2.0_all.deb
-```
+## Frequently Asked Questions (FAQ)
 
-The package installs:
+### Does TypeFlow support Wayland?
+Yes. While Wayland's security model blocks global key listening and text injection tools (like `xinput` and `xdotool`), TypeFlow detects Wayland sessions and defaults to a clipboard fallback. When you select a snippet in the picker, TypeFlow copies it to your clipboard and notifies you, allowing you to paste it anywhere.
 
-- App files under `/opt/typeflow`
-- Launcher at `/usr/bin/typeflow`
-- Desktop entry at `/usr/share/applications/typeflow.desktop`
-- Icon at `/usr/share/pixmaps/typeflow.svg`
+### How does cursor positioning (`{{cursor}}`) work?
+On X11, TypeFlow splits the snippet text at `{{cursor}}`, types the entire text, and then calculates the remaining characters after the cursor position. It then executes `xdotool key --repeat <count> Left` to move your cursor back to the designated position.
 
-Run the installed app:
+### How is TypeFlow different from other Linux text expanders like AutoKey or Espanso?
+TypeFlow is designed to be highly lightweight and zero-dependency beyond PyQt6 and standard X11 utilities. Unlike AutoKey, it features a modern, clean PyQt6 user interface. Unlike Espanso, it does not require editing YAML files and provides a graphical settings menu, system tray integration, and automatic migration from legacy text expander configurations.
 
-```bash
-typeflow
-```
+### Where are snippets stored and is it secure?
+Snippets are stored locally as plain-text JSON in `~/.config/typeflow/config.json` (respecting `XDG_CONFIG_HOME`). TypeFlow runs entirely on your local machine and never transmits your snippets, typed text, or configurations to external servers.
 
-## Usage
+---
 
-1. Open TypeFlow.
-2. Click `Add` to create a snippet.
-3. Choose `keyword` for typed expansion on X11, or `hotkey` for a modifier combo on X11.
-4. Enter the expansion text.
-5. Use the tray menu or `Snippet Picker` button for searchable quick insert.
-
-Supported placeholders inside expansion text:
-
-| Placeholder | Example output |
-| --- | --- |
-| `{{date}}` | `2026-07-12` |
-| `{{time}}` | `14:30` |
-| `{{datetime}}` | `2026-07-12 14:30` |
-
-## Data Storage
-
-TypeFlow stores snippets and settings locally:
-
-```text
-~/.config/typeflow/config.json
-```
-
-If `XDG_CONFIG_HOME` is set, the config path becomes:
-
-```text
-$XDG_CONFIG_HOME/typeflow/config.json
-```
-
-On first launch, TypeFlow migrates existing data from:
-
-```text
-~/.config/linux-text-expander/config.json
-```
-
-Snippet text is passed to external tools as arguments, not shell commands.
-
-## Development
-
-Project layout:
+## Technical Architecture
 
 ```text
 .
-|-- assets/                  # SVG icons
-|-- text_expander/
-|   |-- app.py               # Application controller and tray integration
-|   |-- config.py            # JSON persistence and legacy migration
-|   |-- gui/                 # PyQt6 windows and dialogs
-|   |-- runtime/             # X11 and Wayland runtime backends
-|   |-- models.py            # Snippet, settings, and capability models
-|   |-- placeholders.py      # Date/time placeholder rendering
-|   `-- platform.py          # Session detection and desktop entry helpers
-|-- tests/                   # Unit tests
-|-- build_deb.py             # Debian package builder
-|-- install.py               # Local launcher installer
-`-- run.py                   # Source entry point
+├── assets/                  # SVG icons and graphics
+├── text_expander/
+│   ├── app.py               # Main application controller & tray interface
+│   ├── config.py            # Local JSON storage & configuration migration
+│   ├── models.py            # Snippet, settings, and capability models
+│   ├── placeholders.py      # Dynamic placeholder parsing engine
+│   ├── platform.py          # OS environment & desktop launcher helpers
+│   ├── theme.py             # App styling guidelines
+│   ├── gui/                 # PyQt6 window and dialog components
+│   └── runtime/             # Platform runtime backends (X11 & Wayland)
+├── tests/                   # Automated unit test suite
+├── build_deb.py             # Debian package builder
+├── install.py               # Source local installer
+└── run.py                   # App launch wrapper
 ```
 
-Run the test suite:
-
+### Running Tests
+Execute the unit test suite:
 ```bash
 python3 -m unittest discover -s tests
 ```
 
-Run a specific test file:
-
-```bash
-python3 -m unittest tests/test_x11_backend_security.py
-```
-
-## Packaging Notes
-
-`build_deb.py` creates a self-contained Debian package tree in `dist/pkgroot` and writes the final artifact to:
-
-```text
-dist/typeflow_0.2.0_all.deb
-```
-
-The generated package declares these runtime dependencies:
-
-```text
-python3, python3-pyqt6, xdotool, xinput, x11-xserver-utils
-```
-
-## Limitations
-
-- Wayland sessions do not support universal typed-trigger expansion or global hotkeys in the current backend.
-- X11 expansion depends on external desktop utilities being installed and available on `PATH`.
-- Hotkey capture is implemented by the X11 backend and is intended for explicit modifier combinations such as `Ctrl+Alt+A`.
+---
 
 ## License
 
