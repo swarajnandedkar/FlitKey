@@ -155,8 +155,10 @@ class AppController(QObject):
             if ok:
                 self._notify_snippet_triggered(snippet.label)
                 return
+        
+        rendered_text = render_placeholders(snippet.expansion_text).replace("{{cursor}}", "")
         clipboard = QGuiApplication.clipboard()
-        clipboard.setText(render_placeholders(snippet.expansion_text))
+        clipboard.setText(rendered_text)
         self.tray.showMessage(f"{APP_NAME} copied text", f"{snippet.label} copied to clipboard.")
 
     def _settings_checkbox_changed(self) -> None:

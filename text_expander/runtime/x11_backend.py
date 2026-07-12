@@ -124,7 +124,18 @@ class X11Backend(RuntimeBackend):
         if not self.can_inject_text():
             return False
         self._suppress_until = time.time() + 0.5
-        typed_text = render_placeholders(text)
+        rendered = render_placeholders(text)
+        
+        cursor_index = rendered.find("{{cursor}}")
+        if cursor_index != -1:
+            before_cursor = rendered[:cursor_index]
+            after_cursor = rendered[cursor_index + len("{{cursor}}"):]
+            typed_text = before_cursor + after_cursor
+            move_left = len(after_cursor)
+        else:
+            typed_text = rendered
+            move_left = 0
+
         try:
             subprocess.run(
                 ["xdotool", "type", "--clearmodifiers", "--delay", "1", typed_text],
@@ -132,6 +143,13 @@ class X11Backend(RuntimeBackend):
                 capture_output=True,
                 text=True,
             )
+            if move_left > 0:
+                subprocess.run(
+                    ["xdotool", "key", "--clearmodifiers", "--repeat", str(move_left), "Left"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
         except (FileNotFoundError, subprocess.CalledProcessError):
             return False
         return True
@@ -309,13 +327,8 @@ class X11Backend(RuntimeBackend):
                 capture_output=True,
                 text=True,
             )
-            subprocess.run(
-                ["xdotool", "type", "--clearmodifiers", "--delay", "1", render_placeholders(snippet.expansion_text)],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
         except (FileNotFoundError, subprocess.CalledProcessError):
             return
+        self.inject_text(snippet.expansion_text)
         self._buffer = ""
         self.snippet_triggered.emit(snippet.label)

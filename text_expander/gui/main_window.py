@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -38,6 +39,10 @@ class MainWindow(QMainWindow):
         self.status_label = QLabel()
         self.capabilities_label = QLabel()
         self.capabilities_label.setWordWrap(True)
+
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Search snippets (by label, trigger, or preview)...")
+        self.search_input.textChanged.connect(self._filter_snippets)
 
         self.snippet_table = QTableWidget(0, 5)
         self.snippet_table.setHorizontalHeaderLabels(["Label", "Type", "Trigger", "Enabled", "Preview"])
@@ -94,6 +99,7 @@ class MainWindow(QMainWindow):
         central = QWidget()
         layout = QVBoxLayout()
         layout.addLayout(top_layout)
+        layout.addWidget(self.search_input)
         layout.addWidget(self.snippet_table)
         layout.addLayout(buttons)
         central.setLayout(layout)
@@ -134,6 +140,23 @@ class MainWindow(QMainWindow):
             preview = snippet.expansion_text.replace("\n", " ")[:80]
             self.snippet_table.setItem(row, 4, QTableWidgetItem(preview))
         self.snippet_table.resizeColumnsToContents()
+        self._filter_snippets()
+
+    def _filter_snippets(self) -> None:
+        query = self.search_input.text().strip().lower()
+        for row in range(self.snippet_table.rowCount()):
+            if not query:
+                self.snippet_table.setRowHidden(row, False)
+                continue
+            
+            # Read text from table items to filter
+            label = self.snippet_table.item(row, 0).text().lower() if self.snippet_table.item(row, 0) else ""
+            trigger_type = self.snippet_table.item(row, 1).text().lower() if self.snippet_table.item(row, 1) else ""
+            trigger_val = self.snippet_table.item(row, 2).text().lower() if self.snippet_table.item(row, 2) else ""
+            preview = self.snippet_table.item(row, 4).text().lower() if self.snippet_table.item(row, 4) else ""
+            
+            match = (query in label) or (query in trigger_type) or (query in trigger_val) or (query in preview)
+            self.snippet_table.setRowHidden(row, not match)
 
     def update_settings(self, settings: Settings) -> None:
         self.pause_checkbox.blockSignals(True)
