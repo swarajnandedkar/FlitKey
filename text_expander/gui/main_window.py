@@ -148,13 +148,13 @@ class MainWindow(QMainWindow):
             if not query:
                 self.snippet_table.setRowHidden(row, False)
                 continue
-            
+
             # Read text from table items to filter
             label = self.snippet_table.item(row, 0).text().lower() if self.snippet_table.item(row, 0) else ""
             trigger_type = self.snippet_table.item(row, 1).text().lower() if self.snippet_table.item(row, 1) else ""
             trigger_val = self.snippet_table.item(row, 2).text().lower() if self.snippet_table.item(row, 2) else ""
             preview = self.snippet_table.item(row, 4).text().lower() if self.snippet_table.item(row, 4) else ""
-            
+
             match = (query in label) or (query in trigger_type) or (query in trigger_val) or (query in preview)
             self.snippet_table.setRowHidden(row, not match)
 

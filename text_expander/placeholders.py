@@ -11,7 +11,7 @@ def render_placeholders(text: str) -> str:
         "{{time}}": now.strftime("%H:%M"),
         "{{datetime}}": now.strftime("%Y-%m-%d %H:%M"),
     }
-    
+
     if "{{clipboard}}" in text:
         clipboard_text = ""
         if QGuiApplication.instance() is not None:

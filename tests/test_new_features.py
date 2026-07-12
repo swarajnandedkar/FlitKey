@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch, MagicMock
@@ -30,7 +29,7 @@ class NewFeaturesTests(unittest.TestCase):
         # Mock the QGuiApplication clipboard
         mock_clipboard = MagicMock()
         mock_clipboard.text.return_value = "hello_clip"
-        
+
         with patch("PyQt6.QtGui.QGuiApplication.clipboard", return_value=mock_clipboard):
             result = render_placeholders("copied: {{clipboard}}")
             self.assertEqual(result, "copied: hello_clip")
@@ -47,11 +46,11 @@ class NewFeaturesTests(unittest.TestCase):
             self.assertTrue(self.backend.inject_text("print({{cursor}})"))
 
         self.assertEqual(len(calls), 2)
-        
+
         # Check type call (removes {{cursor}})
         self.assertEqual(calls[0][:4], ["xdotool", "type", "--clearmodifiers", "--delay"])
         self.assertEqual(calls[0][-1], "print()")
-        
+
         # Check cursor movement call (moves left 1 keypress)
         self.assertEqual(calls[1], ["xdotool", "key", "--clearmodifiers", "--repeat", "1", "Left"])
 
@@ -71,7 +70,12 @@ class NewFeaturesTests(unittest.TestCase):
     def test_search_filtering_in_main_window(self) -> None:
         window = MainWindow()
         snippets = [
-            Snippet(label="Email Signature", trigger_type="keyword", keyword=";sig", expansion_text="Best regards,\nSwaraj"),
+            Snippet(
+                label="Email Signature",
+                trigger_type="keyword",
+                keyword=";sig",
+                expansion_text="Best regards,\nSwaraj"
+            ),
             Snippet(label="Greeting", trigger_type="keyword", keyword=";hi", expansion_text="Hello there!"),
             Snippet(label="Command", trigger_type="hotkey", hotkey="Ctrl+Alt+C", expansion_text="clear"),
         ]

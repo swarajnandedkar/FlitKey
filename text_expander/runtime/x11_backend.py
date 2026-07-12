@@ -4,7 +4,6 @@ import re
 import subprocess
 import threading
 import time
-from pathlib import Path
 
 from ..models import CapabilityReport, Snippet
 from ..placeholders import render_placeholders
@@ -125,7 +124,7 @@ class X11Backend(RuntimeBackend):
             return False
         self._suppress_until = time.time() + 0.5
         rendered = render_placeholders(text)
-        
+
         cursor_index = rendered.find("{{cursor}}")
         if cursor_index != -1:
             before_cursor = rendered[:cursor_index]
@@ -234,7 +233,11 @@ class X11Backend(RuntimeBackend):
         if not parts:
             return ""
         key = parts[-1].upper() if len(parts[-1]) == 1 else parts[-1].title()
-        modifiers = sorted(parts[:-1], key=lambda item: ["Ctrl", "Alt", "Shift", "Super"].index(item) if item in ["Ctrl", "Alt", "Shift", "Super"] else 99)
+        mods_order = ["Ctrl", "Alt", "Shift", "Super"]
+        modifiers = sorted(
+            parts[:-1],
+            key=lambda item: mods_order.index(item) if item in mods_order else 99
+        )
         return "+".join(modifiers + [key])
 
     def _hotkey_name_for_keycode(self, keycode: int) -> str | None:

@@ -6,7 +6,7 @@ from PyQt6.QtCore import QObject
 from PyQt6.QtGui import QAction, QGuiApplication, QIcon
 from PyQt6.QtWidgets import QApplication, QMenu, QMessageBox, QSystemTrayIcon
 
-from .branding import APP_NAME, ICON_FILE, PICKER_TITLE
+from .branding import APP_NAME, ICON_FILE
 from .config import load_state, save_state
 from .gui.main_window import MainWindow
 from .gui.picker_dialog import SnippetPickerDialog
@@ -155,7 +155,7 @@ class AppController(QObject):
             if ok:
                 self._notify_snippet_triggered(snippet.label)
                 return
-        
+
         rendered_text = render_placeholders(snippet.expansion_text).replace("{{cursor}}", "")
         clipboard = QGuiApplication.clipboard()
         clipboard.setText(rendered_text)
