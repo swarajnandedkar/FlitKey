@@ -67,6 +67,19 @@ class NewFeaturesTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0][-1], "simple text")
 
+    def test_inject_text_strips_single_trailing_newline_for_keyword_expansion(self) -> None:
+        calls = []
+
+        def fake_run(cmd, **kwargs):
+            calls.append(cmd)
+            return SimpleNamespace(returncode=0)
+
+        with patch("text_expander.runtime.x11_backend.subprocess.run", side_effect=fake_run):
+            self.assertTrue(self.backend.inject_text("line one\n", preserve_trailing_newline=False))
+
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][-1], "line one")
+
     def test_search_filtering_in_main_window(self) -> None:
         window = MainWindow()
         snippets = [

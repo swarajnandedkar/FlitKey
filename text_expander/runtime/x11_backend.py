@@ -119,11 +119,13 @@ class X11Backend(RuntimeBackend):
     def can_inject_text(self) -> bool:
         return self.required_tools.get("xdotool", False)
 
-    def inject_text(self, text: str) -> bool:
+    def inject_text(self, text: str, preserve_trailing_newline: bool = True) -> bool:
         if not self.can_inject_text():
             return False
         self._suppress_until = time.time() + 0.5
         rendered = render_placeholders(text)
+        if not preserve_trailing_newline:
+            rendered = self._strip_single_trailing_newline(rendered)
 
         cursor_index = rendered.find("{{cursor}}")
         if cursor_index != -1:
@@ -152,6 +154,13 @@ class X11Backend(RuntimeBackend):
         except (FileNotFoundError, subprocess.CalledProcessError):
             return False
         return True
+
+    def _strip_single_trailing_newline(self, text: str) -> str:
+        if text.endswith("\r\n"):
+            return text[:-2]
+        if text.endswith("\n") or text.endswith("\r"):
+            return text[:-1]
+        return text
 
     def _read_events(self) -> None:
         assert self._process and self._process.stdout
@@ -332,6 +341,6 @@ class X11Backend(RuntimeBackend):
             )
         except (FileNotFoundError, subprocess.CalledProcessError):
             return
-        self.inject_text(snippet.expansion_text)
+        self.inject_text(snippet.expansion_text, preserve_trailing_newline=False)
         self._buffer = ""
         self.snippet_triggered.emit(snippet.label)

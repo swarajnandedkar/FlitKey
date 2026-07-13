@@ -32,5 +32,5 @@ class RuntimeBackend(QObject):
     def can_inject_text(self) -> bool:
         return False
 
-    def inject_text(self, text: str) -> bool:
+    def inject_text(self, text: str, preserve_trailing_newline: bool = True) -> bool:
         return False
