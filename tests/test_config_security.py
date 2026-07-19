@@ -15,7 +15,7 @@ class ConfigSecurityTests(unittest.TestCase):
     def test_load_state_ignores_malformed_json(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch.dict(os.environ, {"XDG_CONFIG_HOME": tmpdir}, clear=False):
-                target = Path(tmpdir) / "typeflux" / "config.json"
+                target = Path(tmpdir) / "flitkey" / "config.json"
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text("{not valid json", encoding="utf-8")
 
@@ -28,7 +28,7 @@ class ConfigSecurityTests(unittest.TestCase):
     def test_load_state_ignores_unexpected_shapes(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch.dict(os.environ, {"XDG_CONFIG_HOME": tmpdir}, clear=False):
-                target = Path(tmpdir) / "typeflux" / "config.json"
+                target = Path(tmpdir) / "flitkey" / "config.json"
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(json.dumps({"snippets": {"bad": True}, "settings": []}), encoding="utf-8")
 
@@ -48,13 +48,13 @@ class ConfigSecurityTests(unittest.TestCase):
                 )
 
                 config.save_state([snippet], Settings())
-                saved = (Path(tmpdir) / "typeflux" / "config.json").read_text(encoding="utf-8")
+                saved = (Path(tmpdir) / "flitkey" / "config.json").read_text(encoding="utf-8")
                 self.assertIn('"expansion_text": "$(touch /tmp/pwned); rm -rf / ; \\"quotes\\""', saved)
 
                 snippets, _ = config.load_state()
                 self.assertEqual(snippets[0].expansion_text, snippet.expansion_text)
 
-    def test_legacy_config_migrates_to_typeflux_path(self) -> None:
+    def test_legacy_config_migrates_to_flitkey_path(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch.dict(os.environ, {"XDG_CONFIG_HOME": tmpdir}, clear=False):
                 legacy_dir = Path(tmpdir) / "linux-text-expander"
@@ -79,7 +79,7 @@ class ConfigSecurityTests(unittest.TestCase):
 
                 self.assertEqual(snippets[0].label, "legacy")
                 self.assertTrue(settings.autostart)
-                migrated = Path(tmpdir) / "typeflux" / "config.json"
+                migrated = Path(tmpdir) / "flitkey" / "config.json"
                 self.assertTrue(migrated.exists())
 
 

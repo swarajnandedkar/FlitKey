@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .branding import APP_ID, LEGACY_APP_IDS
 from .models import Settings, Snippet
+from .security import atomic_write_json, ensure_private_directory
 
 
 APP_DIR_NAME = APP_ID
@@ -50,8 +51,7 @@ def _migrate_legacy_state(target: Path) -> None:
 def app_config_dir() -> Path:
     path = _config_home() / APP_DIR_NAME
     _migrate_legacy_state(path)
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+    return ensure_private_directory(path)
 
 
 def config_path() -> Path:
@@ -88,5 +88,22 @@ def save_state(snippets: list[Snippet], settings: Settings) -> None:
         "snippets": [snippet.to_dict() for snippet in snippets],
         "settings": settings.to_dict(),
     }
-    with config_path().open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2)
+    atomic_write_json(config_path(), payload)
+
+def export_state(destination: Path) -> None:
+    """Export the local user data for access/portability requests."""
+    snippets, settings = load_state()
+    payload = {
+        "snippets": [snippet.to_dict() for snippet in snippets],
+        "settings": settings.to_dict(),
+    }
+    atomic_write_json(destination, payload)
+
+
+def delete_state() -> bool:
+    """Delete the local FlitKey data file, returning whether it existed."""
+    path = config_path()
+    if not path.exists():
+        return False
+    path.unlink()
+    return True

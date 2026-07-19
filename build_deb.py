@@ -7,7 +7,7 @@ from pathlib import Path
 
 from text_expander.branding import APP_VERSION
 
-PACKAGE_NAME = "typeflux"
+PACKAGE_NAME = "flitkey"
 VERSION = APP_VERSION
 ARCH = "all"
 ROOT = Path(__file__).resolve().parent
@@ -20,7 +20,7 @@ APPLICATIONS_DIR = BUILD_DIR / "usr" / "share" / "applications"
 PIXMAPS_DIR = BUILD_DIR / "usr" / "share" / "pixmaps"
 OUTPUT_DEB = DIST_DIR / f"{PACKAGE_NAME}_{VERSION}_{ARCH}.deb"
 
-EXCLUDE_NAMES = {"__pycache__", ".git", ".agents", ".codex", "dist", "tests", "build_deb.py"}
+EXCLUDE_NAMES = {"__pycache__", ".git", ".agents", ".codex", "dist", "tests", "build_deb.py", "build_windows.py", "requirements-windows.txt", "flitkey-website", ".claude", ".github", ".gitignore", "installer"}
 EXCLUDE_SUFFIXES = {".pyc", ".pyo"}
 
 
@@ -32,6 +32,8 @@ def clean_dir(path: Path) -> None:
 
 def should_copy(path: Path) -> bool:
     if path.name in EXCLUDE_NAMES:
+        return False
+    if "GTM" in path.name:
         return False
     if path.suffix in EXCLUDE_SUFFIXES:
         return False
@@ -62,8 +64,8 @@ Priority: optional
 Architecture: {ARCH}
 Maintainer: Local Build <local@example.com>
 Depends: python3, python3-pyqt6, xdotool, xinput, x11-xserver-utils
-Description: TypeFlux desktop text expander
- TypeFlux is a polished Linux desktop text expander with a modern GUI,
+Description: FlitKey desktop text expander
+ FlitKey is a polished Linux desktop text expander with a modern GUI,
  tray integration, autostart support, X11 keyword expansion,
  and graceful Wayland fallback behavior.
 """
@@ -82,7 +84,7 @@ exec /usr/bin/python3 /opt/{PACKAGE_NAME}/run.py "$@"
 def write_desktop_entry() -> None:
     desktop = f"""[Desktop Entry]
 Type=Application
-Name=TypeFlux
+Name=FlitKey
 Comment=Fast snippets and text expansion for Linux desktops
 Exec=/usr/bin/{PACKAGE_NAME}
 Icon={PACKAGE_NAME}
@@ -96,7 +98,7 @@ X-GNOME-Autostart-enabled=true
 
 
 def copy_icon() -> None:
-    source = ROOT / "assets" / "typeflux.svg"
+    source = ROOT / "assets" / "flitkey.svg"
     target = PIXMAPS_DIR / f"{PACKAGE_NAME}.svg"
     shutil.copy2(source, target)
 

@@ -19,11 +19,11 @@ const SNIPPET_PACKS = {
   support: [
     { trigger: ":ty", name: "Thank You Note", replace: "Thank you so much for reaching out! Please let me know if you have any questions or need further assistance.", category: "Support", desc: "Polite support closing" },
     { trigger: ":refund", name: "Refund Process Instruction", replace: "Dear Customer,\n\nWe have initiated your refund request. The funds should reflect in your account within 3-5 business days depending on your bank.\n\nLet us know if you need anything else.", category: "Support", desc: "Instructions for billing issues" },
-    { trigger: ":steps", name: "Troubleshooting Steps", replace: "Could you please try the following troubleshooting steps:\n1. Clear your browser cache and cookies.\n2. Restart the TypeFlux desktop daemon.\n3. Verify your system permissions.\n\nLet us know if the issue persists.", category: "Support", desc: "Standard app error guide" }
+    { trigger: ":steps", name: "Troubleshooting Steps", replace: "Could you please try the following troubleshooting steps:\n1. Clear your browser cache and cookies.\n2. Restart the FlitKey desktop daemon.\n3. Verify your system permissions.\n\nLet us know if the issue persists.", category: "Support", desc: "Standard app error guide" }
   ],
   freelance: [
     { trigger: ":inv", name: "Client Invoice Email", replace: "Dear client,\n\nPlease find the invoice for this month's services attached. Let me know if you need any adjustments or if you have any questions.\n\nBest regards,\n[Your Name]", category: "Freelancer", desc: "Standard invoicing email" },
-    { trigger: ":pitch", name: "Proposal Follow-up", replace: "Hi [Name],\n\nHope you are doing well! I'm following up on the proposal sent last week regarding the TypeFlux web design. I'm keen to hear your feedback and begin building the components.\n\nBest,", category: "Freelancer", desc: "Client pitch nudge template" },
+    { trigger: ":pitch", name: "Proposal Follow-up", replace: "Hi [Name],\n\nHope you are doing well! I'm following up on the proposal sent last week regarding the FlitKey web design. I'm keen to hear your feedback and begin building the components.\n\nBest,", category: "Freelancer", desc: "Client pitch nudge template" },
     { trigger: ":update", name: "Weekly Status Update", replace: "Hi team,\n\nHere is a quick summary of progress this week:\n- Created initial design assets per branding specifications.\n- Integrated light/dark mode stylesheets.\n- Completed interactive demo component testing.\n\nNext steps: Launch beta builds and clear code warnings.", category: "Freelancer", desc: "Project milestone status report" }
   ],
   ai: [

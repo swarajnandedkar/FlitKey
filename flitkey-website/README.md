@@ -1,6 +1,6 @@
-# TypeFlux Website
+# FlitKey Website
 
-This directory contains the landing page and interactive simulator for **TypeFlux**, a local-first desktop text expander for Linux and Windows.
+This directory contains the landing page and interactive simulator for **FlitKey**, a local-first desktop text expander for Linux and Windows.
 
 ## Design Highlights
 
@@ -29,4 +29,4 @@ Then visit [http://localhost:8000](http://localhost:8000) or [http://localhost:3
 This folder is configured for zero-config Netlify hosting:
 - Build folder is set to `.` (current folder).
 - Security headers are pre-configured in `netlify.toml`.
-- To deploy, connect your GitHub repository to Netlify and point the base directory to `typeflux-website`.
+- To deploy, connect your GitHub repository to Netlify and point the base directory to `flitkey-website`.

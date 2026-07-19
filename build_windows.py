@@ -14,8 +14,8 @@ ASSETS_DIR = ROOT / "assets"
 WINDOWS_BUILD_DIR = ROOT / "build" / "windows"
 PYINSTALLER_DIST_DIR = WINDOWS_BUILD_DIR / "dist"
 PYINSTALLER_WORK_DIR = WINDOWS_BUILD_DIR / "work"
-ICON_PATH = WINDOWS_BUILD_DIR / "typeflux.ico"
-INSTALLER_SCRIPT = ROOT / "installer" / "typeflux.iss"
+ICON_PATH = WINDOWS_BUILD_DIR / "flitkey.ico"
+INSTALLER_SCRIPT = ROOT / "installer" / "flitkey.iss"
 
 
 def _run(command: list[str]) -> None:
@@ -31,9 +31,9 @@ def _create_windows_icon() -> None:
     application = QGuiApplication.instance()
     owns_application = application is None
     if owns_application:
-        application = QGuiApplication(["typeflux-icon-builder"])
+        application = QGuiApplication(["flitkey-icon-builder"])
     try:
-        icon = QIcon(str(ASSETS_DIR / "typeflux.svg"))
+        icon = QIcon(str(ASSETS_DIR / "flitkey.svg"))
         pixmap = icon.pixmap(QSize(256, 256))
         if pixmap.isNull() or not pixmap.save(str(ICON_PATH), "ICO"):
             raise RuntimeError("Qt could not write the Windows ICO icon")
@@ -95,7 +95,7 @@ def build() -> Path:
 
     iscc = _find_iscc()
     _run([str(iscc), str(INSTALLER_SCRIPT), f"/DMyAppVersion={APP_VERSION}"])
-    installer = ROOT / "dist" / "windows" / f"TypeFlux-Setup-{APP_VERSION}-x64.exe"
+    installer = ROOT / "dist" / "windows" / f"FlitKey-Setup-{APP_VERSION}-x64.exe"
     print(f"Built {installer}")
     return installer
 

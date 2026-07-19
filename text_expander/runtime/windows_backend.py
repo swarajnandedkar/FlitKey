@@ -291,7 +291,7 @@ class WindowsBackend(RuntimeBackend):
         self._message_queue_ready.clear()
         self._thread = threading.Thread(
             target=self._run_message_loop,
-            name="TypeFluxWindowsHook",
+            name="FlitKeyWindowsHook",
             daemon=True,
         )
         self._thread.start()
