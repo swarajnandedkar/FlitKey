@@ -2,6 +2,11 @@ name: Build Windows installer
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing release tag to receive the Windows installer (optional)"
+        required: false
+        type: string
   pull_request:
     paths:
       - "assets/**"
@@ -15,7 +20,7 @@ on:
       - "v*"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   windows-installer:
@@ -52,3 +57,11 @@ jobs:
           name: FlitKey-Windows-x64
           path: dist/windows/FlitKey-Setup-*-x64.exe
           if-no-files-found: error
+
+      - name: Upload installer to GitHub release
+        if: ${{ (github.event_name == 'push' && github.ref_type == 'tag') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '') }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: gh release upload "$env:RELEASE_TAG" (Get-ChildItem "dist/windows/FlitKey-Setup-*-x64.exe").FullName --clobber
