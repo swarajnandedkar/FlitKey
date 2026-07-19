@@ -2,7 +2,7 @@
 
 FlitKey is a lightweight, open-source Linux and Windows desktop text expander designed to create reusable text snippets and insert them instantly using typed keywords, global hotkeys, or a searchable quick-insert picker.
 
-Built with **Python** and **PyQt6**, FlitKey operates completely locally and dynamically adjusts its runtime behavior based on whether you are running an X11 or Wayland desktop session.
+Built with **Python** and **PyQt6**, FlitKey operates completely locally and dynamically adjusts its runtime behavior based on whether you are running Linux (X11/Wayland) or Windows.
 
 ---
 
@@ -14,8 +14,8 @@ Built with **Python** and **PyQt6**, FlitKey operates completely locally and dyn
 | **GUI Framework** | PyQt6 |
 | **Compatible Platforms** | Linux (X11/Wayland) and Windows 10/11 (64-bit) |
 | **Supported Displays** | X11, Wayland, and native Windows keyboard hooks |
-| **Dependencies** | `python3-pyqt6`, `xdotool`, `xinput`, `x11-xserver-utils` (for X11) |
-| **Configuration Path** | `~/.config/flitkey/config.json` |
+| **Dependencies** | `python3-pyqt6`, `xdotool`, `xinput`, `x11-xserver-utils` (for Linux X11) |
+| **Configuration Path** | `~/.config/flitkey/config.json` (Linux) / `%APPDATA%\flitkey\config.json` (Windows) |
 | **License** | [MIT License](LICENSE) |
 | **Current Version** | `0.3.0` |
 
@@ -25,8 +25,8 @@ Built with **Python** and **PyQt6**, FlitKey operates completely locally and dyn
 
 *   **Snippet Manager**: A clean PyQt6 interface to manage, preview, and toggle snippet triggers.
 *   **Live Search Filter**: Real-time filtering in the main snippet manager to find snippets by label, type, keyword, or preview text.
-*   **X11 Keyword Triggers**: Automatically detects typed keywords and expands them in place.
-*   **X11 Global Hotkeys**: Triggers expansions via custom key combinations (e.g. `Ctrl+Alt+A`).
+*   **X11 & Windows Keyword Triggers**: Automatically detects typed keywords and expands them in place.
+*   **Global Hotkeys**: Triggers expansions via custom key combinations (e.g. `Ctrl+Alt+A`).
 *   **Wayland Clipboard Fallback**: Copies snippets to the system clipboard and notifies the user if native keyboard simulation is restricted.
 *   **System Tray Integration**: Access quick insert, pause/resume, or settings from a dedicated tray menu.
 *   **Interactive Snippet Picker**: A searchable overlay window to select and insert snippets on demand.
@@ -38,13 +38,13 @@ Built with **Python** and **PyQt6**, FlitKey operates completely locally and dyn
 
 FlitKey automatically probes your current desktop session and selects the appropriate runtime backend.
 
-| Feature / Session | X11 Desktop | Wayland Desktop | Technical Mechanism |
-| --- | --- | --- | --- |
-| **Typed Keyword Expansion** | Yes | No | Listens to root raw inputs via `xinput test-xi2` |
-| **Global Hotkeys** | Yes | No | Simulates key sequences using `xdotool` |
-| **Searchable Picker Insertion**| Yes | Clipboard Fallback | Pastes text or copies to clipboard via `QClipboard` |
-| **System Tray controls** | Yes | Yes | PyQt6 QSystemTrayIcon |
-| **Autostart at Login** | Yes | Yes | XDG Autostart `.desktop` entry |
+| Feature / Session | X11 Desktop | Wayland Desktop | Windows (10/11) | Technical Mechanism |
+| --- | --- | --- | --- | --- |
+| **Typed Keyword Expansion** | Yes | No | Yes | `xinput test-xi2` (Linux) / `SetWindowsHookEx` (Windows) |
+| **Global Hotkeys** | Yes | No | Yes | `xdotool` (Linux) / Windows Key Hooks |
+| **Searchable Picker Insertion**| Yes | Clipboard Fallback | Yes | Pastes text or copies to clipboard via `QClipboard` / `SendInput` |
+| **System Tray controls** | Yes | Yes | Yes | PyQt6 `QSystemTrayIcon` |
+| **Autostart at Login** | Yes | Yes | Yes | XDG Autostart `.desktop` entry (Linux) / Registry key (Windows) |
 
 ---
 
@@ -68,15 +68,17 @@ sudo apt install desktop-file-utils dpkg
 
 ### Windows Support
 
-FlitKey includes a native Windows backend for typed keyword expansion, global hotkeys, Unicode text insertion, system tray controls, and per-user startup. A self-contained 64-bit Windows 10/11 installer can be built with `python build_windows.py` on Windows or downloaded from the GitHub Actions artifact. See [WINDOWS.md](WINDOWS.md) for build instructions and Windows limitations.
+FlitKey includes a native Windows backend for typed keyword expansion, global hotkeys, Unicode text insertion, system tray controls, and per-user startup. A self-contained 64-bit Windows 10/11 installer can be built with `python build_windows.py` on Windows or downloaded from the GitHub Actions artifact. See [WINDOWS.md](WINDOWS.md) for detailed build instructions and Windows specific behavior.
 
-### Security and compliance readiness
+### Security and Privacy
 
-FlitKey is local-first and currently has no hosted account, telemetry, or central data service. Compliance readiness controls and scope limitations are documented in [COMPLIANCE_READINESS.md](COMPLIANCE_READINESS.md), [PRIVACY.md](PRIVACY.md), and [SECURITY.md](SECURITY.md). These documents do not constitute HIPAA, SOC 2, SOC 3, GDPR, CCPA, or FSQS certification; regulated deployments require legal review and independent assurance.
+FlitKey is local-first and currently has no hosted account, telemetry, or central data service. Data handling, privacy policies, and security guidelines are documented in [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
+
+---
 
 ## Installation & Running
 
-### Method 1: Install via Debian Package (Recommended)
+### Method 1: Install via Debian Package (Recommended for Debian/Ubuntu)
 
 1. Build the Debian package:
    ```bash
@@ -100,15 +102,19 @@ FlitKey is local-first and currently has no hosted account, telemetry, or centra
    git clone https://github.com/swarajnandedkar/FlitKey.git
    cd FlitKey
    ```
-2. Run the application entry point:
+2. Install requirements (Windows):
+   ```cmd
+   pip install -r requirements-windows.txt
+   ```
+3. Run the application entry point:
    ```bash
    python3 run.py
    ```
-3. Start minimized to the system tray:
+4. Start minimized to the system tray:
    ```bash
    python3 run.py --minimized
    ```
-4. Create a local desktop launcher shortcut:
+5. Create a local desktop launcher shortcut:
    ```bash
    python3 install.py
    ```
@@ -143,7 +149,7 @@ On X11, FlitKey splits the snippet text at `{{cursor}}`, types the entire text, 
 FlitKey is designed to be highly lightweight and zero-dependency beyond PyQt6 and standard X11 utilities. Unlike AutoKey, it features a modern, clean PyQt6 user interface. Unlike Espanso, it does not require editing YAML files and provides a graphical settings menu, system tray integration, and automatic migration from legacy text expander configurations.
 
 ### Where are snippets stored and is it secure?
-Snippets are stored locally as plain-text JSON in `~/.config/flitkey/config.json` (respecting `XDG_CONFIG_HOME`). FlitKey runs entirely on your local machine and never transmits your snippets, typed text, or configurations to external servers.
+Snippets are stored locally as plain-text JSON in `~/.config/flitkey/config.json` on Linux and `%APPDATA%\flitkey\config.json` on Windows. FlitKey runs entirely on your local machine and never transmits your snippets, typed text, or configurations to external servers.
 
 ---
 
@@ -160,9 +166,11 @@ Snippets are stored locally as plain-text JSON in `~/.config/flitkey/config.json
 │   ├── platform.py          # OS environment & desktop launcher helpers
 │   ├── theme.py             # App styling guidelines
 │   ├── gui/                 # PyQt6 window and dialog components
-│   └── runtime/             # Platform runtime backends (X11 & Wayland)
+│   └── runtime/             # Platform runtime backends (X11, Wayland, & Windows)
 ├── tests/                   # Automated unit test suite
 ├── build_deb.py             # Debian package builder
+├── build_windows.py         # Windows 64-bit installer builder
+├── requirements-windows.txt # Windows dependencies
 ├── install.py               # Source local installer
 └── run.py                   # App launch wrapper
 ```
@@ -178,3 +186,4 @@ python3 -m unittest discover -s tests
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
