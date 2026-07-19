@@ -93,8 +93,8 @@ TypeFlux includes a native Windows backend for typed keyword expansion, global h
 
 1. Clone and enter the directory:
    ```bash
-   git clone https://github.com/swarajnandedkar/TypeFlow.git
-   cd TypeFlow
+   git clone https://github.com/swarajnandedkar/TypeFlux.git
+   cd TypeFlux
    ```
 2. Run the application entry point:
    ```bash
