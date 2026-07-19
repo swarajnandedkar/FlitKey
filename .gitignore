@@ -26,3 +26,8 @@ ENV/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Excluded project files
+flitkey-website/
+COMPLIANCE_READINESS.md
+
