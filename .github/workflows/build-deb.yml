@@ -1,0 +1,55 @@
+name: Build Debian package
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing release tag to receive the Debian package (optional)"
+        required: false
+        type: string
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  debian-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y desktop-file-utils dpkg
+
+      - name: Build Debian package
+        run: python3 build_deb.py
+
+      - name: Upload Debian package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FlitKey-Debian-pkg
+          path: dist/flitkey_*_all.deb
+          if-no-files-found: error
+
+      - name: Create or update GitHub release with .deb package
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: |
+          DEB_FILE=$(ls dist/flitkey_*_all.deb)
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" "$DEB_FILE" --clobber
+          else
+            gh release create "$RELEASE_TAG" "$DEB_FILE" --title "FlitKey $RELEASE_TAG" --notes "FlitKey Release $RELEASE_TAG"
+          fi
