@@ -1,8 +1,8 @@
-# TypeFlow
+# TypeFlux
 
-TypeFlow is a lightweight, open-source Linux desktop text expander designed to create reusable text snippets and insert them instantly using typed keywords, global hotkeys, or a searchable quick-insert picker. 
+TypeFlux is a lightweight, open-source Linux and Windows desktop text expander designed to create reusable text snippets and insert them instantly using typed keywords, global hotkeys, or a searchable quick-insert picker.
 
-Built with **Python** and **PyQt6**, TypeFlow operates completely locally and dynamically adjusts its runtime behavior based on whether you are running an X11 or Wayland desktop session.
+Built with **Python** and **PyQt6**, TypeFlux operates completely locally and dynamically adjusts its runtime behavior based on whether you are running an X11 or Wayland desktop session.
 
 ---
 
@@ -12,12 +12,12 @@ Built with **Python** and **PyQt6**, TypeFlow operates completely locally and dy
 | --- | --- |
 | **Language** | Python 3.10+ |
 | **GUI Framework** | PyQt6 |
-| **Compatible Platforms** | Linux (Ubuntu, Debian, Fedora, Arch, etc.) |
-| **Supported Displays** | X11 (Native text injection & hotkeys), Wayland (Clipboard fallback) |
+| **Compatible Platforms** | Linux (X11/Wayland) and Windows 10/11 (64-bit) |
+| **Supported Displays** | X11, Wayland, and native Windows keyboard hooks |
 | **Dependencies** | `python3-pyqt6`, `xdotool`, `xinput`, `x11-xserver-utils` (for X11) |
-| **Configuration Path** | `~/.config/typeflow/config.json` |
+| **Configuration Path** | `~/.config/typeflux/config.json` |
 | **License** | [MIT License](LICENSE) |
-| **Current Version** | `0.2.0` |
+| **Current Version** | `0.3.0` |
 
 ---
 
@@ -36,7 +36,7 @@ Built with **Python** and **PyQt6**, TypeFlow operates completely locally and dy
 
 ## Platform Support Matrix
 
-TypeFlow automatically probes your current desktop session and selects the appropriate runtime backend.
+TypeFlux automatically probes your current desktop session and selects the appropriate runtime backend.
 
 | Feature / Session | X11 Desktop | Wayland Desktop | Technical Mechanism |
 | --- | --- | --- | --- |
@@ -52,7 +52,7 @@ TypeFlow automatically probes your current desktop session and selects the appro
 
 ### Prerequisite Packages (Ubuntu/Debian)
 
-TypeFlow requires Python 3.10 or newer and specific X11 utility tools for expansion triggers.
+TypeFlux requires Python 3.10 or newer and specific X11 utility tools for expansion triggers.
 
 ```bash
 sudo apt update
@@ -66,6 +66,10 @@ sudo apt install desktop-file-utils dpkg
 
 ---
 
+### Windows Support
+
+TypeFlux includes a native Windows backend for typed keyword expansion, global hotkeys, Unicode text insertion, system tray controls, and per-user startup. A self-contained 64-bit Windows 10/11 installer can be built with `python build_windows.py` on Windows or downloaded from the GitHub Actions artifact. See [WINDOWS.md](WINDOWS.md) for build instructions and Windows limitations.
+
 ## Installation & Running
 
 ### Method 1: Install via Debian Package (Recommended)
@@ -76,14 +80,14 @@ sudo apt install desktop-file-utils dpkg
    ```
 2. Install the generated package:
    ```bash
-   sudo apt install ./dist/typeflow_0.2.0_all.deb
+   sudo apt install ./dist/typeflux_0.3.0_all.deb
    ```
 3. Run the application:
    ```bash
-   typeflow
+   typeflux
    ```
 
-*The package installs the app files under `/opt/typeflow`, a binary launcher at `/usr/bin/typeflow`, a desktop entry at `/usr/share/applications/typeflow.desktop`, and icons.*
+*The package installs the app files under `/opt/typeflux`, a binary launcher at `/usr/bin/typeflux`, a desktop entry at `/usr/share/applications/typeflux.desktop`, and icons.*
 
 ### Method 2: Run from Source
 
@@ -109,7 +113,7 @@ sudo apt install desktop-file-utils dpkg
 
 ## Dynamic Placeholders Guide
 
-TypeFlow renders dynamic placeholders at the time of expansion. Use the following tokens in your snippet expansion text:
+TypeFlux renders dynamic placeholders at the time of expansion. Use the following tokens in your snippet expansion text:
 
 | Token | Replacement Value | Example Output |
 | --- | --- | --- |
@@ -125,17 +129,17 @@ TypeFlow renders dynamic placeholders at the time of expansion. Use the followin
 
 ## Frequently Asked Questions (FAQ)
 
-### Does TypeFlow support Wayland?
-Yes. While Wayland's security model blocks global key listening and text injection tools (like `xinput` and `xdotool`), TypeFlow detects Wayland sessions and defaults to a clipboard fallback. When you select a snippet in the picker, TypeFlow copies it to your clipboard and notifies you, allowing you to paste it anywhere.
+### Does TypeFlux support Wayland?
+Yes. While Wayland's security model blocks global key listening and text injection tools (like `xinput` and `xdotool`), TypeFlux detects Wayland sessions and defaults to a clipboard fallback. When you select a snippet in the picker, TypeFlux copies it to your clipboard and notifies you, allowing you to paste it anywhere.
 
 ### How does cursor positioning (`{{cursor}}`) work?
-On X11, TypeFlow splits the snippet text at `{{cursor}}`, types the entire text, and then calculates the remaining characters after the cursor position. It then executes `xdotool key --repeat <count> Left` to move your cursor back to the designated position.
+On X11, TypeFlux splits the snippet text at `{{cursor}}`, types the entire text, and then calculates the remaining characters after the cursor position. It then executes `xdotool key --repeat <count> Left` to move your cursor back to the designated position.
 
-### How is TypeFlow different from other Linux text expanders like AutoKey or Espanso?
-TypeFlow is designed to be highly lightweight and zero-dependency beyond PyQt6 and standard X11 utilities. Unlike AutoKey, it features a modern, clean PyQt6 user interface. Unlike Espanso, it does not require editing YAML files and provides a graphical settings menu, system tray integration, and automatic migration from legacy text expander configurations.
+### How is TypeFlux different from other Linux text expanders like AutoKey or Espanso?
+TypeFlux is designed to be highly lightweight and zero-dependency beyond PyQt6 and standard X11 utilities. Unlike AutoKey, it features a modern, clean PyQt6 user interface. Unlike Espanso, it does not require editing YAML files and provides a graphical settings menu, system tray integration, and automatic migration from legacy text expander configurations.
 
 ### Where are snippets stored and is it secure?
-Snippets are stored locally as plain-text JSON in `~/.config/typeflow/config.json` (respecting `XDG_CONFIG_HOME`). TypeFlow runs entirely on your local machine and never transmits your snippets, typed text, or configurations to external servers.
+Snippets are stored locally as plain-text JSON in `~/.config/typeflux/config.json` (respecting `XDG_CONFIG_HOME`). TypeFlux runs entirely on your local machine and never transmits your snippets, typed text, or configurations to external servers.
 
 ---
 

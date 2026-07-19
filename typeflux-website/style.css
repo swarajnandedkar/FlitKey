@@ -1,6 +1,7 @@
 /* Custom variables and theme colors */
 :root {
-  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-display: 'Space Grotesk', var(--font-sans);
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', Courier, monospace;
 
   /* Color system - Default Light Theme */
@@ -133,6 +134,7 @@ section {
 
 /* Typography elements */
 h1, h2, h3, h4, h5 {
+  font-family: var(--font-display);
   font-weight: 700;
   line-height: 1.25;
   color: var(--text-primary);
@@ -310,18 +312,22 @@ code {
 .logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  font-family: var(--font-display);
   font-size: 1.4rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text-primary);
   text-decoration: none;
 }
 
-.logo-icon {
-  width: 28px;
-  height: 28px;
-  color: var(--accent);
-  filter: drop-shadow(0 2px 8px rgba(var(--accent-rgb), 0.3));
+.logo-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  background-color: #0b0f19;
 }
 
 .logo-text span {
@@ -425,9 +431,9 @@ code {
 /* Hero Section */
 .hero-section {
   padding-top: 160px;
-  padding-bottom: 80px;
-  text-align: center;
+  padding-bottom: 100px;
   overflow: hidden;
+  position: relative;
 }
 
 .glow-bg {
@@ -435,50 +441,59 @@ code {
   top: -10%;
   left: 50%;
   transform: translateX(-50%);
-  width: 600px;
-  height: 400px;
-  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.12) 0%, rgba(var(--accent-rgb), 0) 70%);
+  width: 800px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.15) 0%, rgba(var(--accent-rgb), 0) 70%);
   z-index: -1;
   pointer-events: none;
-  filter: blur(50px);
+  filter: blur(80px);
 }
 
-.hero-content {
-  max-width: 800px;
-  margin: 0 auto;
+.hero-grid-container {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 60px;
+  align-items: center;
+  text-align: left;
+}
+
+.hero-text-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .hero-title {
+  font-family: var(--font-display);
   font-size: 3.5rem;
   font-weight: 800;
   letter-spacing: -0.03em;
   margin-bottom: 24px;
+  line-height: 1.15;
   background: linear-gradient(135deg, var(--text-primary) 30%, var(--accent-light));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .hero-lead {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   color: var(--text-secondary);
-  margin-bottom: 40px;
-  max-width: 680px;
-  margin-left: auto;
-  margin-right: auto;
+  margin-bottom: 32px;
+  max-width: 600px;
 }
 
 .hero-ctas {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 20px;
-  margin-bottom: 48px;
+  margin-bottom: 40px;
+  width: 100%;
 }
 
 .download-group {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
 }
 
@@ -494,12 +509,49 @@ code {
 
 .os-icons {
   display: flex;
-  justify-content: center;
   gap: 24px;
   border-top: 1px solid var(--border-color);
-  padding-top: 32px;
-  max-width: 500px;
-  margin: 0 auto;
+  padding-top: 24px;
+  width: 100%;
+  max-width: 450px;
+}
+
+/* Hero Visual Side Styles */
+.hero-visual-side {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.hero-image-wrapper {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-xl);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 100%;
+  background-color: var(--bg-secondary);
+}
+
+.hero-image-wrapper:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: var(--shadow-xl), var(--shadow-glow);
+}
+
+.hero-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.hero-image-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(var(--accent-rgb), 0.15) 0%, rgba(var(--accent-rgb), 0) 70%);
+  pointer-events: none;
 }
 
 .os-item {
@@ -1574,6 +1626,16 @@ code {
     padding: 60px 0;
   }
 
+  .hero-grid-container {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: 40px;
+  }
+
+  .hero-text-side {
+    align-items: center;
+  }
+
   .hero-title {
     font-size: 2.5rem;
   }
@@ -1585,6 +1647,15 @@ code {
   .hero-ctas {
     flex-direction: column;
     gap: 16px;
+    align-items: center;
+  }
+
+  .download-group {
+    align-items: center;
+  }
+
+  .os-icons {
+    justify-content: center;
   }
 
   .features-grid, .packs-grid, .download-cards, .migration-layout, .stats-layout, .footer-layout {

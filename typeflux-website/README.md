@@ -1,6 +1,6 @@
 # TypeFlux Website
 
-This directory contains the landing page and interactive simulator for **TypeFlux** (formerly TypeFlow), a local-first desktop text expander for Linux and Windows.
+This directory contains the landing page and interactive simulator for **TypeFlux**, a local-first desktop text expander for Linux and Windows.
 
 ## Design Highlights
 

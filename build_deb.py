@@ -7,7 +7,7 @@ from pathlib import Path
 
 from text_expander.branding import APP_VERSION
 
-PACKAGE_NAME = "typeflow"
+PACKAGE_NAME = "typeflux"
 VERSION = APP_VERSION
 ARCH = "all"
 ROOT = Path(__file__).resolve().parent
@@ -62,8 +62,8 @@ Priority: optional
 Architecture: {ARCH}
 Maintainer: Local Build <local@example.com>
 Depends: python3, python3-pyqt6, xdotool, xinput, x11-xserver-utils
-Description: TypeFlow desktop text expander
- TypeFlow is a polished Linux desktop text expander with a modern GUI,
+Description: TypeFlux desktop text expander
+ TypeFlux is a polished Linux desktop text expander with a modern GUI,
  tray integration, autostart support, X11 keyword expansion,
  and graceful Wayland fallback behavior.
 """
@@ -82,7 +82,7 @@ exec /usr/bin/python3 /opt/{PACKAGE_NAME}/run.py "$@"
 def write_desktop_entry() -> None:
     desktop = f"""[Desktop Entry]
 Type=Application
-Name=TypeFlow
+Name=TypeFlux
 Comment=Fast snippets and text expansion for Linux desktops
 Exec=/usr/bin/{PACKAGE_NAME}
 Icon={PACKAGE_NAME}
@@ -96,7 +96,7 @@ X-GNOME-Autostart-enabled=true
 
 
 def copy_icon() -> None:
-    source = ROOT / "assets" / "typeflow.svg"
+    source = ROOT / "assets" / "typeflux.svg"
     target = PIXMAPS_DIR / f"{PACKAGE_NAME}.svg"
     shutil.copy2(source, target)
 

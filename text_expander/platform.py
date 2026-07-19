@@ -113,7 +113,7 @@ def set_autostart(enabled: bool) -> None:
 
 
 def _set_windows_autostart(enabled: bool) -> None:
-    """Toggle TypeFlow in the per-user Windows startup registry key.
+    """Toggle TypeFlux in the per-user Windows startup registry key.
 
     The installer is per-user, so HKCU avoids an elevation prompt and keeps the
     setting scoped to the Windows account that enabled it.

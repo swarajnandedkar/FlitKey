@@ -25,7 +25,7 @@ class PlatformSecurityTests(unittest.TestCase):
     def test_desktop_entry_uses_quoted_exec_line(self) -> None:
         with patch.object(platform, "app_root", return_value=Path("/tmp/demo path")):
             content = platform.desktop_entry_content()
-        self.assertIn("Name=TypeFlow", content)
+        self.assertIn("Name=TypeFlux", content)
         exec_line = next(line for line in content.splitlines() if line.startswith("Exec="))
         self.assertIn('"/tmp/demo path/run.py"', exec_line)
 
