@@ -145,6 +145,13 @@ Yes. While Wayland's security model blocks global key listening and text injecti
 ### How does cursor positioning (`{{cursor}}`) work?
 On X11, FlitKey splits the snippet text at `{{cursor}}`, types the entire text, and then calculates the remaining characters after the cursor position. It then executes `xdotool key --repeat <count> Left` to move your cursor back to the designated position.
 
+### How do I import snippets from Espanso, AutoHotkey, or AutoText?
+Click the **Import...** button in the main FlitKey window. FlitKey natively supports importing snippets from:
+* **Espanso** (`.yml`, `.yaml`)
+* **AutoHotkey** (`.ahk`)
+* **AutoText / CSV / TSV** (`.csv`, `.tsv`, `.txt`)
+* **FlitKey / JSON** (`.json`)
+
 ### How is FlitKey different from other Linux text expanders like AutoKey or Espanso?
 FlitKey is designed to be highly lightweight and zero-dependency beyond PyQt6 and standard X11 utilities. Unlike AutoKey, it features a modern, clean PyQt6 user interface. Unlike Espanso, it does not require editing YAML files and provides a graphical settings menu, system tray integration, and automatic migration from legacy text expander configurations.
 
@@ -161,6 +168,7 @@ Snippets are stored locally as plain-text JSON in `~/.config/flitkey/config.json
 ├── text_expander/
 │   ├── app.py               # Main application controller & tray interface
 │   ├── config.py            # Local JSON storage & configuration migration
+│   ├── importers.py         # Multi-format snippet importer (Espanso, AHK, CSV, JSON)
 │   ├── models.py            # Snippet, settings, and capability models
 │   ├── placeholders.py      # Dynamic placeholder parsing engine
 │   ├── platform.py          # OS environment & desktop launcher helpers

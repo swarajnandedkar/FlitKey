@@ -4,13 +4,14 @@ from pathlib import Path
 
 from PyQt6.QtCore import QObject
 from PyQt6.QtGui import QAction, QGuiApplication, QIcon
-from PyQt6.QtWidgets import QApplication, QMenu, QMessageBox, QSystemTrayIcon
+from PyQt6.QtWidgets import QApplication, QFileDialog, QMenu, QMessageBox, QSystemTrayIcon
 
 from .branding import APP_NAME, ICON_FILE
 from .config import load_state, save_state
 from .gui.main_window import MainWindow
 from .gui.picker_dialog import SnippetPickerDialog
 from .gui.snippet_dialog import SnippetDialog
+from .importers import import_snippets_from_file
 from .models import Snippet
 from .platform import install_launcher, set_autostart
 from .placeholders import render_placeholders
@@ -38,9 +39,11 @@ class AppController(QObject):
         self.window.edit_requested.connect(self.edit_snippet)
         self.window.delete_requested.connect(self.delete_snippet)
         self.window.toggle_requested.connect(self.toggle_snippet)
+        self.window.import_requested.connect(self.import_snippets)
         self.window.pause_toggled.connect(self.set_paused)
         self.window.autostart_toggled.connect(self.set_autostart_enabled)
         self.window.picker_requested.connect(self.open_picker)
+
 
         self.window.start_minimized_checkbox.toggled.connect(self._settings_checkbox_changed)
         self.window.case_sensitive_checkbox.toggled.connect(self._settings_checkbox_changed)
@@ -132,6 +135,41 @@ class AppController(QObject):
             return
         snippet.enabled = not snippet.enabled
         self._persist_and_reload()
+
+    def import_snippets(self) -> None:
+        file_path_str, _ = QFileDialog.getOpenFileName(
+            self.window,
+            "Import Snippets",
+            "",
+            "Supported Files (*.yml *.yaml *.ahk *.csv *.tsv *.json *.txt);;Espanso YAML (*.yml *.yaml);;AutoHotkey (*.ahk);;CSV / TSV (*.csv *.tsv);;JSON (*.json);;All Files (*.*)",
+        )
+        if not file_path_str:
+            return
+
+        try:
+            imported = import_snippets_from_file(Path(file_path_str))
+            if not imported:
+                QMessageBox.information(
+                    self.window,
+                    "Import Snippets",
+                    "No valid snippets found in the selected file.",
+                )
+                return
+
+            self.snippets.extend(imported)
+            self._persist_and_reload()
+            QMessageBox.information(
+                self.window,
+                "Import Successful",
+                f"Successfully imported {len(imported)} snippet(s).",
+            )
+        except Exception as error:
+            QMessageBox.warning(
+                self.window,
+                "Import Error",
+                f"Could not import snippets from file:\n{error}",
+            )
+
 
     def set_paused(self, paused: bool) -> None:
         self.settings.paused = paused

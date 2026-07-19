@@ -27,6 +27,7 @@ class MainWindow(QMainWindow):
     edit_requested = pyqtSignal(str)
     delete_requested = pyqtSignal(str)
     toggle_requested = pyqtSignal(str)
+    import_requested = pyqtSignal()
     pause_toggled = pyqtSignal(bool)
     autostart_toggled = pyqtSignal(bool)
     picker_requested = pyqtSignal()
@@ -54,12 +55,14 @@ class MainWindow(QMainWindow):
         edit_button = QPushButton("Edit")
         delete_button = QPushButton("Delete")
         toggle_button = QPushButton("Enable / Disable")
+        import_button = QPushButton("Import...")
         picker_button = QPushButton("Snippet Picker")
 
         add_button.clicked.connect(self.add_requested.emit)
         edit_button.clicked.connect(self._emit_edit)
         delete_button.clicked.connect(self._emit_delete)
         toggle_button.clicked.connect(self._emit_toggle)
+        import_button.clicked.connect(self.import_requested.emit)
         picker_button.clicked.connect(self.picker_requested.emit)
 
         buttons = QHBoxLayout()
@@ -67,8 +70,10 @@ class MainWindow(QMainWindow):
         buttons.addWidget(edit_button)
         buttons.addWidget(delete_button)
         buttons.addWidget(toggle_button)
+        buttons.addWidget(import_button)
         buttons.addStretch(1)
         buttons.addWidget(picker_button)
+
 
         self.pause_checkbox = QCheckBox("Pause expansion")
         self.autostart_checkbox = QCheckBox("Launch at login")
