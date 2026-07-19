@@ -14,13 +14,17 @@ def render_placeholders(text: str) -> str:
 
     if "{{clipboard}}" in text:
         clipboard_text = ""
-        if QGuiApplication.instance() is not None:
-            clipboard = QGuiApplication.clipboard()
-            if clipboard:
-                clipboard_text = clipboard.text()
+        try:
+            if QGuiApplication.instance() is not None:
+                clipboard = QGuiApplication.clipboard()
+                if clipboard:
+                    clipboard_text = clipboard.text()
+        except Exception:
+            pass
         replacements["{{clipboard}}"] = clipboard_text
 
     rendered = text
     for placeholder, value in replacements.items():
         rendered = rendered.replace(placeholder, value)
     return rendered
+

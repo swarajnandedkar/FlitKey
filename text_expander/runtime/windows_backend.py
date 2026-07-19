@@ -265,12 +265,19 @@ class WindowsBackend(RuntimeBackend):
             ctypes.c_void_p,
         ]
         self._user32.ToUnicodeEx.restype = ctypes.c_int
+        self._user32.GetForegroundWindow.argtypes = []
+        self._user32.GetForegroundWindow.restype = wintypes.HWND
+        self._user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+        self._user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+        self._user32.GetAsyncKeyState.argtypes = [ctypes.c_int]
+        self._user32.GetAsyncKeyState.restype = wintypes.SHORT
         self._user32.SendInput.argtypes = [
             wintypes.UINT,
             ctypes.POINTER(INPUT),
             ctypes.c_int,
         ]
         self._user32.SendInput.restype = wintypes.UINT
+
 
         self._kernel32.GetCurrentThreadId.argtypes = []
         self._kernel32.GetCurrentThreadId.restype = wintypes.DWORD
@@ -459,8 +466,8 @@ class WindowsBackend(RuntimeBackend):
 
         typed_text = self._event_to_text(event)
         if not typed_text:
-            self._buffer = ""
             return False
+
 
         self._buffer = (self._buffer + typed_text)[-100:]
         snippet = self._matching_keyword()
@@ -592,8 +599,13 @@ class WindowsBackend(RuntimeBackend):
     def _event_to_text(self, event: KBDLLHOOKSTRUCT) -> str | None:
         assert self._user32 is not None
         keyboard_state = (ctypes.c_ubyte * 256)()
-        if not self._user32.GetKeyboardState(keyboard_state):
-            return None
+        self._user32.GetKeyboardState(keyboard_state)
+
+        if self._user32.GetAsyncKeyState(self.VK_SHIFT) & 0x8000:
+            keyboard_state[self.VK_SHIFT] |= 0x80
+            keyboard_state[self.VK_LSHIFT] |= 0x80
+        if self._user32.GetAsyncKeyState(0x14) & 0x0001:  # VK_CAPITAL
+            keyboard_state[0x14] |= 0x01
 
         for vk_code in self._pressed_vks:
             if 0 <= vk_code < 256:
@@ -601,7 +613,9 @@ class WindowsBackend(RuntimeBackend):
         keyboard_state[int(event.vkCode)] |= 0x80
 
         output = ctypes.create_unicode_buffer(8)
-        layout = self._user32.GetKeyboardLayout(0)
+        foreground_hwnd = self._user32.GetForegroundWindow()
+        foreground_thread = self._user32.GetWindowThreadProcessId(foreground_hwnd, None)
+        layout = self._user32.GetKeyboardLayout(foreground_thread or 0)
         count = self._user32.ToUnicodeEx(
             int(event.vkCode),
             int(event.scanCode),
@@ -614,6 +628,7 @@ class WindowsBackend(RuntimeBackend):
         if count <= 0:
             return None
         return "".join(output[:count])
+
 
     def _send_text(self, text: str) -> bool:
         normalized = text.replace("\r\n", "\n").replace("\r", "\n")
