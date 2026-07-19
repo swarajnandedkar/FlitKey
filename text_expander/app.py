@@ -24,8 +24,10 @@ class AppController(QObject):
         self.app = app
         self.snippets, self.settings = load_state()
         self.window = MainWindow()
+        self.window.setWindowIcon(self._load_icon())
         self.window.update_snippets(self.snippets)
         self.window.update_settings(self.settings)
+
 
         self.backend = create_backend()
         self.window.update_capabilities(self.backend.capability_report)
@@ -59,10 +61,18 @@ class AppController(QObject):
         self._update_status(self.backend.capability_report.status_message)
 
     def _load_icon(self) -> QIcon:
+        assets_dir = Path(__file__).resolve().parent.parent / "assets"
+        for name in ("flitkey.png", "flitkey.svg", "icon.png", "icon.svg"):
+            candidate = assets_dir / name
+            if candidate.exists():
+                icon = QIcon(str(candidate))
+                if not icon.isNull():
+                    return icon
         icon = QIcon.fromTheme("preferences-desktop-keyboard-shortcuts")
         if not icon.isNull():
             return icon
-        return QIcon(str(Path(__file__).resolve().parent.parent / "assets" / ICON_FILE))
+        return QIcon(str(assets_dir / ICON_FILE))
+
 
     def _build_tray_menu(self) -> QMenu:
         menu = QMenu()
