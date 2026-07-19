@@ -17,7 +17,8 @@ Built with **Python** and **PyQt6**, FlitKey operates completely locally and dyn
 | **Dependencies** | `python3-pyqt6`, `xdotool`, `xinput`, `x11-xserver-utils` (for Linux X11) |
 | **Configuration Path** | `~/.config/flitkey/config.json` (Linux) / `%APPDATA%\flitkey\config.json` (Windows) |
 | **License** | [MIT License](LICENSE) |
-| **Current Version** | `0.3.0` |
+| **Current Version** | `0.4.0` |
+
 
 ---
 
@@ -31,6 +32,16 @@ Built with **Python** and **PyQt6**, FlitKey operates completely locally and dyn
 *   **System Tray Integration**: Access quick insert, pause/resume, or settings from a dedicated tray menu.
 *   **Interactive Snippet Picker**: A searchable overlay window to select and insert snippets on demand.
 *   **Dynamic Placeholders**: Expand variables like date, time, clipboard data, or specify cursor placement after expansion.
+
+---
+
+## Interface & Screenshots
+
+### Main Window & Snippet Manager
+![FlitKey Main Window](assets/main_window.png)
+
+### Snippet Editor
+![FlitKey Snippet Editor](assets/snippet_editor.png)
 
 ---
 
@@ -164,7 +175,7 @@ Snippets are stored locally as plain-text JSON in `~/.config/flitkey/config.json
 
 ```text
 .
-├── assets/                  # SVG icons and graphics
+├── assets/                  # SVG icons, logo, and UI screenshots
 ├── text_expander/
 │   ├── app.py               # Main application controller & tray interface
 │   ├── config.py            # Local JSON storage & configuration migration
