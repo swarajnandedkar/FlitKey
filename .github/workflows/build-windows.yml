@@ -58,10 +58,13 @@ jobs:
           path: dist/windows/FlitKey-Setup-*-x64.exe
           if-no-files-found: error
 
-      - name: Upload installer to GitHub release
+      - name: Create or update GitHub release with installer
         if: ${{ (github.event_name == 'push' && github.ref_type == 'tag') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '') }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
-        run: gh release upload "$env:RELEASE_TAG" (Get-ChildItem "dist/windows/FlitKey-Setup-*-x64.exe").FullName --clobber
+        run: |
+          $exe = (Get-ChildItem "dist/windows/FlitKey-Setup-*-x64.exe").FullName
+          gh release create "$env:RELEASE_TAG" "$exe" --title "FlitKey $env:RELEASE_TAG" --notes "FlitKey Release $env:RELEASE_TAG" --clobber
+
