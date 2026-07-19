@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import sys
 from json import JSONDecodeError
 from pathlib import Path
 
@@ -18,8 +19,18 @@ def _xdg_config_home() -> Path:
     return Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
 
 
+def _config_home() -> Path:
+    """Return the appropriate per-user configuration root for this platform."""
+    if sys.platform == "win32":
+        app_data = os.environ.get("APPDATA") or os.environ.get("LOCALAPPDATA")
+        if app_data:
+            return Path(app_data)
+        return Path.home() / "AppData" / "Roaming"
+    return _xdg_config_home()
+
+
 def _legacy_config_dirs() -> list[Path]:
-    base = _xdg_config_home()
+    base = _config_home()
     return [base / legacy_id for legacy_id in LEGACY_APP_IDS]
 
 
@@ -37,7 +48,7 @@ def _migrate_legacy_state(target: Path) -> None:
 
 
 def app_config_dir() -> Path:
-    path = _xdg_config_home() / APP_DIR_NAME
+    path = _config_home() / APP_DIR_NAME
     _migrate_legacy_state(path)
     path.mkdir(parents=True, exist_ok=True)
     return path

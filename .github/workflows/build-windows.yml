@@ -1,0 +1,54 @@
+name: Build Windows installer
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "assets/**"
+      - "installer/**"
+      - "requirements-windows.txt"
+      - "build_windows.py"
+      - "run.py"
+      - "text_expander/**"
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  windows-installer:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python build dependencies
+        run: python -m pip install -r requirements-windows.txt
+
+      - name: Ensure Inno Setup is available
+        shell: pwsh
+        run: |
+          $candidates = @(
+            "$env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe",
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+          )
+          if (-not ($candidates | Where-Object { Test-Path $_ })) {
+            choco install innosetup --yes --no-progress
+          }
+
+      - name: Build installer
+        run: python build_windows.py
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TypeFlow-Windows-x64
+          path: dist/windows/TypeFlow-Setup-*-x64.exe
+          if-no-files-found: error

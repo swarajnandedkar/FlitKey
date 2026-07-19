@@ -5,8 +5,10 @@ import stat
 import subprocess
 from pathlib import Path
 
+from text_expander.branding import APP_VERSION
+
 PACKAGE_NAME = "typeflow"
-VERSION = "0.2.0"
+VERSION = APP_VERSION
 ARCH = "all"
 ROOT = Path(__file__).resolve().parent
 DIST_DIR = ROOT / "dist"

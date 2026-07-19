@@ -3,6 +3,7 @@ from __future__ import annotations
 APP_NAME = "TypeFlow"
 APP_ID = "typeflow"
 APP_SLUG = "typeflow"
+APP_VERSION = "0.3.0"
 APP_TAGLINE = "Quick snippets, calm workflows, less repetitive typing."
 LEGACY_APP_IDS = ["linux-text-expander"]
 ICON_FILE = "typeflow.svg"

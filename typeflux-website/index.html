@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TypeFlux — Open Source Desktop Text Expander for Windows & Linux</title>
+  <meta name="description" content="TypeFlux is a local-first, open-source desktop text expander with a graphical user interface. Speed up your typing on Linux (X11/Wayland) and Windows with zero configuration files, zero accounts, and zero cloud dependencies.">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%234f46e5%22/><text y=%2270%22 x=%2222%22 font-family=%22system-ui%22 font-size=%2260%22 font-weight=%22bold%22 fill=%22white%22>TF</text></svg>">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Dark mode prevention of FOUC -->
+  <meta name="color-scheme" content="light dark">
+  <script>
+    {
+      const savedTheme = localStorage.getItem("color-scheme");
+      if (savedTheme) {
+        document.documentElement.setAttribute("data-theme", savedTheme);
+      } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      } else {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    }
+  </script>
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header id="site-header">
+    <div class="header-container">
+      <a href="#" class="logo">
+        <img src="assets/logo.jpg" alt="TypeFlux logo" class="logo-img">
+        <span class="logo-text">Type<span>Flux</span></span>
+      </a>
+      
+      <nav id="site-nav" aria-label="Main Navigation">
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#demo">Live Demo</a></li>
+          <li><a href="#compatibility">OS Support</a></li>
+          <li><a href="#packs">Snippet Packs</a></li>
+          <li><a href="#migration">Migration</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <!-- Theme Toggle -->
+        <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle light/dark theme">
+          <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+          </svg>
+          <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+          </svg>
+        </button>
+        
+        <a href="https://github.com/swarajnandedkar/TypeFlow" class="btn btn-outline github-btn" target="_blank" rel="noopener">
+          <svg class="github-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.137 20.162 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
+          </svg>
+          <span>Star</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section id="hero" class="hero-section">
+    <div class="glow-bg"></div>
+    <div class="container">
+      <div class="hero-grid-container">
+        <div class="hero-text-side">
+          <span class="badge">🚀 Introducing TypeFlux — V1.0.0</span>
+          <h1 class="hero-title">Desktop text expansion, without the cloud or config files.</h1>
+          <p class="hero-lead">
+            An open-source, local-first text expander with a graphical snippet manager. Works system-wide across Windows and Linux. Boost your productivity with zero subscription fees, zero accounts, and full privacy.
+          </p>
+          
+          <div class="hero-ctas">
+            <div class="download-group">
+              <a href="#downloads" class="btn btn-primary btn-large">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                </svg>
+                <span>Get TypeFlux Free</span>
+              </a>
+              <span class="download-sub">Linux (.deb / AppImage) & Windows (winget / .exe)</span>
+            </div>
+            <a href="#demo" class="btn btn-outline btn-large">
+              <span>Try Interactive Demo</span>
+            </a>
+          </div>
+
+          <div class="os-icons">
+            <span class="os-item active-os" id="os-badge-windows">
+              <svg class="os-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M0 3.449L9.75 2.1v9.45H0V3.449zM0 12.45h9.75v9.45L0 20.551v-8.102zM10.8 1.95L24 0v11.55H10.8V1.95zM10.8 12.45H24v11.55l-13.2-1.95v-9.6z"/>
+              </svg>
+              Windows 10 / 11
+            </span>
+            <span class="os-item active-os" id="os-badge-linux">
+              <svg class="os-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2a10 10 0 0 0-3.327 19.435c.162.03.222-.07.222-.156 0-.077-.003-.28-.005-.55-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.137 20.162 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
+              </svg>
+              Linux (X11 & Wayland)
+            </span>
+          </div>
+        </div>
+        <div class="hero-visual-side">
+          <div class="hero-image-wrapper">
+            <img src="assets/hero.jpg" alt="TypeFlux workflow visual" class="hero-image">
+            <div class="hero-image-glow"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Demo / Raycast Launcher Simulator Section -->
+  <section id="demo" class="demo-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Experience it live in your browser</h2>
+        <p>Type keywords in the text editor to see them expand instantly. Open the Raycast-style manager (or press <kbd>Ctrl</kbd> + <kbd>K</kbd>) to search and create shortcuts.</p>
+      </div>
+
+      <div class="demo-grid">
+        <!-- Interactive Text Sandbox -->
+        <div class="demo-panel sandbox-panel">
+          <div class="panel-header">
+            <div class="window-dots">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <span class="panel-title">Try Typing Here</span>
+            <div class="panel-actions">
+              <button id="clear-sandbox" class="btn-icon-only" title="Clear text">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+              </button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <textarea id="demo-textarea" placeholder="Click here and try typing:
+:shrug
+:date
+:lg
+:ty
+...or write your own custom expansion!"></textarea>
+            
+            <div class="editor-footer">
+              <span class="shortcut-tip">Press <kbd>Ctrl</kbd> + <kbd>K</kbd> to open snippet manager</span>
+              <span class="char-count" id="editor-char-count">0 chars</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Simulated Raycast Desktop App Manager -->
+        <div class="demo-panel app-panel" id="app-window">
+          <div class="panel-header">
+            <div class="window-os-controls">
+              <!-- Dynamically switches based on platform selector -->
+              <div class="os-selector-pill">
+                <button class="os-toggle active" data-platform="windows">Windows</button>
+                <button class="os-toggle" data-platform="linux">Linux</button>
+              </div>
+            </div>
+            <span class="panel-title">TypeFlux Application</span>
+            <div class="os-indicators-header">
+              <span class="status-dot green"></span>
+              <span class="status-txt">Engine Active</span>
+            </div>
+          </div>
+          
+          <div class="app-container">
+            <!-- Raycast Command Bar -->
+            <div class="raycast-search-bar">
+              <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+              </svg>
+              <input type="text" id="raycast-input" placeholder="Search snippets by shortcut, expansion, or category..." autocomplete="off">
+              <span class="raycast-badge">Raycast Mode</span>
+            </div>
+
+            <div class="app-main-view">
+              <!-- Snippet List -->
+              <div class="snippet-list-column">
+                <div class="snippet-list-scroll" id="snippet-list-items">
+                  <!-- JS injected items -->
+                </div>
+                <div class="list-footer">
+                  <span>Use <kbd>↑</kbd><kbd>↓</kbd> keys to navigate</span>
+                  <span><kbd>Enter</kbd> to select</span>
+                </div>
+              </div>
+
+              <!-- Detail Pane / Raycast Sidebar -->
+              <div class="snippet-detail-pane" id="snippet-detail">
+                <!-- JS injected details -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Live Feedback Notification Toast -->
+      <div id="demo-toast" class="toast hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="toast-icon">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <path d="m22 4-10 10.01-3-30"></path>
+        </svg>
+        <span id="toast-message">Expanded :date!</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Core Pillars / Features Section -->
+  <section id="features" class="features-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Designed for modern, private workflows</h2>
+        <p>TypeFlux combines the polish of a commercial desktop app with the core strengths of open-source utilities.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feature-icon">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <h3>100% Privacy & Local Storage</h3>
+          <p>No account creation, no servers, and no cloud synchronization. Your snippets, keys, and statistics are stored in plain, readable JSON directly on your machine.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feature-icon">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+          </div>
+          <h3>Sleek Graphical GUI Manager</h3>
+          <p>Ditch configuration file struggles. Manage snippets, test shortcuts, monitor usage, and configure settings using a clean, native desktop application dashboard.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feature-icon">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
+          <h3>Dynamic Placeholders</h3>
+          <p>Snippets aren't static. Insert automated current dates, times, clipboard items, or set the final cursor placement dynamically after typing shortcuts.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feature-icon">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <h3>Built-in Local Productivity Tracker</h3>
+          <p>Get immediate, private insights on your work. TypeFlux tracks expansions locally to estimate characters avoided and calculate hours saved over time.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feature-icon">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+            </svg>
+          </div>
+          <h3>Effortless Portable Snippet Packs</h3>
+          <p>Export custom triggers into lightweight <code>.typefluxpack</code> JSON packages to share templates, replies, and command workflows with colleagues instantly.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrapper">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feature-icon">
+              <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+              <polyline points="2 17 12 22 22 17"></polyline>
+              <polyline points="2 12 12 17 22 12"></polyline>
+            </svg>
+          </div>
+          <h3>Mitigated Trademark & Naming Risks</h3>
+          <p>Re-designed and rebranded to <strong>TypeFlux</strong> to avoid SaaS conflicts, ensure long-term ecosystem clarity, and maintain code reliability.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OS Support & Platform Compatibility Matrix Section -->
+  <section id="compatibility" class="compatibility-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Operating System Compatibility</h2>
+        <p>TypeFlux is designed for desktop systems. We believe in platform transparency and clear support capabilities.</p>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="compatibility-table">
+          <thead>
+            <tr>
+              <th>OS / Platform</th>
+              <th>Expansion Style</th>
+              <th>System Tray & UI</th>
+              <th>Setup Requirements</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="platform-name">
+                <svg viewBox="0 0 24 24" fill="currentColor" class="table-os-icon"><path d="M0 3.449L9.75 2.1v9.45H0V3.449zM0 12.45h9.75v9.45L0 20.551v-8.102zM10.8 1.95L24 0v11.55H10.8V1.95zM10.8 12.45H24v11.55l-13.2-1.95v-9.6z"/></svg>
+                <span>Windows 10 / 11</span>
+              </td>
+              <td><span class="status-badge full">Full Typed Expansion</span></td>
+              <td>Supported (System Tray)</td>
+              <td>Executable installer, no Python dependency required</td>
+              <td class="status-col active">Gated Beta</td>
+            </tr>
+            <tr>
+              <td class="platform-name">
+                <svg viewBox="0 0 24 24" fill="currentColor" class="table-os-icon"><path d="M12 2a10 10 0 0 0-3.327 19.435c.162.03.222-.07.222-.156 0-.077-.003-.28-.005-.55-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.137 20.162 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+                <span>Linux (X11 Desktop)</span>
+              </td>
+              <td><span class="status-badge full">Full Typed Expansion</span></td>
+              <td>Supported (System Tray)</td>
+              <td>Requires <code>xdotool</code>, <code>xclip</code> installed</td>
+              <td class="status-col active">Production Ready</td>
+            </tr>
+            <tr>
+              <td class="platform-name">
+                <svg viewBox="0 0 24 24" fill="currentColor" class="table-os-icon"><path d="M12 2a10 10 0 0 0-3.327 19.435c.162.03.222-.07.222-.156 0-.077-.003-.28-.005-.55-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.137 20.162 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+                <span>Linux (Wayland Desktop)</span>
+              </td>
+              <td><span class="status-badge fallback">Quick Insert &amp; Clipboard</span></td>
+              <td>Desktop specific / App Window</td>
+              <td>Requires <code>wl-clipboard</code> for expansion</td>
+              <td class="status-col warning">Partial Support</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="matrix-footnote">
+        💡 <strong>Wayland Note:</strong> Due to security designs in Wayland preventing global key-listening, TypeFlux defaults to a Quick Insert bar (Raycast prompt style) which copies your selected snippet to the clipboard and pastes it automatically.
+      </p>
+    </div>
+  </section>
+
+  <!-- Snippet Packs Section -->
+  <section id="packs" class="packs-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Pre-configured Snippet Packs</h2>
+        <p>Boost your startup with curated snippet files tailored for specific workflows. Click to preview or import into TypeFlux.</p>
+      </div>
+
+      <div class="packs-slider-container">
+        <!-- Pack cards -->
+        <div class="packs-grid">
+          <div class="pack-card" data-pack="dev">
+            <div class="pack-icon">💻</div>
+            <h4>Developers &amp; GitHub Pack</h4>
+            <p>Git commands, templates, boilerplate templates, and markdown shortcuts for developers.</p>
+            <div class="pack-tags">
+              <span>:lgtm</span> <span>:issue</span> <span>:docs</span>
+            </div>
+            <button class="btn btn-outline btn-small view-pack-btn" data-pack="dev">Load Into Editor</button>
+          </div>
+
+          <div class="pack-card" data-pack="support">
+            <div class="pack-icon">🤝</div>
+            <h4>Customer Support Pack</h4>
+            <p>Fast-response shortcuts for customer tickets, refunds, troubleshooting, and links.</p>
+            <div class="pack-tags">
+              <span>:ty</span> <span>:refund</span> <span>:steps</span>
+            </div>
+            <button class="btn btn-outline btn-small view-pack-btn" data-pack="support">Load Into Editor</button>
+          </div>
+
+          <div class="pack-card" data-pack="freelance">
+            <div class="pack-icon">💼</div>
+            <h4>Freelancer Client Pack</h4>
+            <p>Sleek shortcuts for sending invoices, pitching proposals, and status updates.</p>
+            <div class="pack-tags">
+              <span>:inv</span> <span>:pitch</span> <span>:update</span>
+            </div>
+            <button class="btn btn-outline btn-small view-pack-btn" data-pack="freelance">Load Into Editor</button>
+          </div>
+
+          <div class="pack-card" data-pack="ai">
+            <div class="pack-icon">🤖</div>
+            <h4>AI &amp; Prompt Engineering</h4>
+            <p>Handy shortcut prompts for code reviews, summaries, formatting, and translation.</p>
+            <div class="pack-tags">
+              <span>:review</span> <span>:sum</span> <span>:translate</span>
+            </div>
+            <button class="btn btn-outline btn-small view-pack-btn" data-pack="ai">Load Into Editor</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Migration Section -->
+  <section id="migration" class="migration-section">
+    <div class="container">
+      <div class="migration-layout">
+        <div class="migration-content">
+          <span class="badge badge-accent">Migration Paths</span>
+          <h2>Moving from Espanso or Beeftext?</h2>
+          <p>Preserve your hard-earned snippet lists. TypeFlux provides built-in YAML and XML migration tools to import configuration libraries automatically on startup.</p>
+          <div class="migration-features">
+            <div class="mig-item">
+              <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Import Espanso <code>.yml</code> configurations in 1 click</span>
+            </div>
+            <div class="mig-item">
+              <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Convert Beeftext <code>.json</code>/<code>.xml</code> packages automatically</span>
+            </div>
+            <div class="mig-item">
+              <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Instant preview of converted hotkeys and triggers</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="migration-visual">
+          <div class="code-compare-card">
+            <div class="card-header-bar">
+              <span>espanso_config.yml</span>
+              <span class="arrow-indicator">➔</span>
+              <span>typeflux.json (GUI Loaded)</span>
+            </div>
+            <pre class="code-block"><code><span class="diff-minus">- trigger: ":shrug"</span>
+<span class="diff-minus">- replace: "¯\_(ツ)_/¯"</span>
+<span class="diff-plus">+ {</span>
+<span class="diff-plus">+   "trigger": ":shrug",</span>
+<span class="diff-plus">+   "replace": "¯\\_(ツ)_/¯",</span>
+<span class="diff-plus">+   "name": "Shrug Emoji"</span>
+<span class="diff-plus">+ }</span></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Local Productivity Proof Section -->
+  <section class="stats-section">
+    <div class="container">
+      <div class="stats-layout">
+        <div class="stats-card">
+          <div class="stats-header">
+            <h4>TypeFlux Saved Statistics</h4>
+            <span class="badge green">This Week</span>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-number-box">
+              <div class="number">214</div>
+              <div class="label">Expansions Triggered</div>
+            </div>
+            <div class="stat-number-box">
+              <div class="number">18.6k</div>
+              <div class="label">Characters Saved</div>
+            </div>
+            <div class="stat-number-box">
+              <div class="number">1.5h</div>
+              <div class="label">Estimated Time Saved</div>
+            </div>
+          </div>
+          <div class="stats-footer">
+            <span>✨ 100% Calculated locally on your device.</span>
+          </div>
+        </div>
+
+        <div class="stats-text">
+          <span class="badge badge-success">Productivity Proof</span>
+          <h2>Measure your saved time in real-time</h2>
+          <p>TypeFlux computes statistics on the fly based on triggers processed, comparing expanded lengths to short inputs. Share private dashboard summaries with coworkers to showcase optimization loops without giving away any snippet data.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Downloads Section -->
+  <section id="downloads" class="downloads-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Download TypeFlux for your OS</h2>
+        <p>Choose your distribution model. Free, open-source, and signed for your security.</p>
+      </div>
+
+      <div class="download-cards">
+        <!-- Linux Card -->
+        <div class="download-card">
+          <div class="card-icon">🐧</div>
+          <h3>TypeFlux for Linux</h3>
+          <p class="version-meta">Stable Build • v1.0.0 (X11 & Wayland)</p>
+          <div class="package-links">
+            <a href="https://github.com/swarajnandedkar/TypeFlow/releases/download/v1.0.0/typeflux_1.0.0_amd64.deb" class="btn btn-primary">
+              Download .deb Installer
+            </a>
+            <a href="https://github.com/swarajnandedkar/TypeFlow/releases/download/v1.0.0/typeflux-1.0.0.AppImage" class="btn btn-outline">
+              Download AppImage
+            </a>
+          </div>
+          <div class="install-cli">
+            <p>Or install via terminal:</p>
+            <pre><code>sudo dpkg -i typeflux_1.0.0_amd64.deb</code></pre>
+          </div>
+        </div>
+
+        <!-- Windows Card -->
+        <div class="download-card">
+          <div class="card-icon">🪟</div>
+          <h3>TypeFlux for Windows</h3>
+          <p class="version-meta">Gated Beta • v1.0.0-beta1 (Windows 10/11)</p>
+          <div class="package-links">
+            <a href="https://github.com/swarajnandedkar/TypeFlow/releases/download/v1.0.0-beta1/TypeFlux-Setup-1.0.0.exe" class="btn btn-primary">
+              Download .exe Setup (Signed)
+            </a>
+          </div>
+          <div class="install-cli">
+            <p>Or install via winget:</p>
+            <pre><code>winget install TypeFlux.TypeFlux</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section id="faq" class="faq-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Frequently Asked Questions</h2>
+        <p>Everything you need to know about security, licenses, and compatibility.</p>
+      </div>
+
+      <div class="faq-grid">
+        <div class="faq-item" id="faq-1">
+          <button class="faq-trigger" aria-expanded="false" aria-controls="faq-content-1">
+            <h4>Why does a text expander require keyboard triggers or input helper permissions?</h4>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-content" id="faq-content-1" hidden>
+            <p>To replace a shortcut (e.g. <code>:date</code>) system-wide, TypeFlux must listen for typed characters. When a registered trigger is matched, TypeFlux deletes the trigger inputs using keyboard event simulation and pastes or types the expanded content. It operates completely offline, and your keystrokes never leave your machine.</p>
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-2">
+          <button class="faq-trigger" aria-expanded="false" aria-controls="faq-content-2">
+            <h4>Is my data synchronized to any cloud database?</h4>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-content" id="faq-content-2" hidden>
+            <p>No. TypeFlux stores snippets, history, and preferences locally in plain-text JSON within your local system directory (e.g., <code>~/.config/typeflux/</code> on Linux or <code>AppData/Roaming/TypeFlux</code> on Windows). We do not run synchronization servers, nor do we require an account.</p>
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-3">
+          <button class="faq-trigger" aria-expanded="false" aria-controls="faq-content-3">
+            <h4>Does it work correctly on Linux Wayland environments?</h4>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-content" id="faq-content-3" hidden>
+            <p>Wayland restricts direct system-wide key monitoring for security reasons. Therefore, on Wayland sessions, TypeFlux uses a dedicated "Quick Insert" command bar (Raycast style). Pressing the hotkey opens a quick selection bar where you search, press Enter, and the snippet is immediately copied and inserted using the clipboard.</p>
+          </div>
+        </div>
+
+        <div class="faq-item" id="faq-4">
+          <button class="faq-trigger" aria-expanded="false" aria-controls="faq-content-4">
+            <h4>What is the licensing policy?</h4>
+            <span class="faq-icon">+</span>
+          </button>
+          <div class="faq-content" id="faq-content-4" hidden>
+            <p>TypeFlux is licensed under the MIT License. The code is 100% open-source, and you are free to inspect, package, fork, or contribute adjustments directly on GitHub.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-layout">
+        <div class="footer-brand">
+          <div class="logo">
+            <img src="assets/logo.jpg" alt="TypeFlux logo" class="logo-img">
+            <span class="logo-text">Type<span>Flux</span></span>
+          </div>
+          <p>Local-first open-source desktop text expansion for modern professionals.</p>
+        </div>
+        <div class="footer-links">
+          <div>
+            <h5>Product</h5>
+            <ul>
+              <li><a href="#features">Features</a></li>
+              <li><a href="#demo">Live Demo</a></li>
+              <li><a href="#downloads">Downloads</a></li>
+            </ul>
+          </div>
+          <div>
+            <h5>Ecosystem</h5>
+            <ul>
+              <li><a href="#packs">Snippet Packs</a></li>
+              <li><a href="#migration">Migration Guides</a></li>
+              <li><a href="https://github.com/swarajnandedkar/TypeFlow" target="_blank" rel="noopener">GitHub Project</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 TypeFlux. Open source under the MIT License.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Main Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
