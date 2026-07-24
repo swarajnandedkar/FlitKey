@@ -34,3 +34,34 @@ The backend uses `SetWindowsHookEx(WH_KEYBOARD_LL)` to observe keyboard input an
 Windows prevents a non-elevated process from injecting input into an elevated application. If the target application is running as administrator, start FlitKey as administrator as well.
 
 Configuration is stored in `%APPDATA%\flitkey\config.json`.
+
+## Windows Security & SmartScreen Notice
+
+When installing FlitKey on Windows, Windows Defender SmartScreen may display a warning:
+> **"Windows protected your PC — Microsoft Defender SmartScreen prevented an unrecognized app from starting."** (Publisher: *Unknown Publisher*)
+
+### Why this happens
+FlitKey is an open-source application and community-built executables are not digitally signed with a commercial Code Signing Certificate. Windows Defender SmartScreen automatically flags unsigned downloaded `.exe` files as untrusted until they build reputation or are digitally signed.
+
+### How to install safely
+1. **Graphical Installer Bypass**:
+   * Click **"More info"** on the SmartScreen dialog.
+   * Click **"Run anyway"** to launch the installer.
+2. **PowerShell Unblock Command**:
+   If Windows blocks the file from running, open PowerShell in your downloads folder and unblock the installer:
+   ```powershell
+   Unblock-File -Path .\FlitKey-Setup-*-x64.exe
+   ```
+
+### Code Signing for Maintainers & Custom Builds
+If you have a Code Signing Certificate (PFX file) or Azure Trusted Signing, you can automatically sign the generated executable and installer:
+
+1. **Local Build**: Set the environment variables before running `python build_windows.py`:
+   ```powershell
+   $env:CODESIGN_CERT_PATH = "C:\path\to\certificate.pfx"
+   $env:CODESIGN_CERT_PASSWORD = "YourPassword"
+   python build_windows.py
+   ```
+2. **GitHub Actions**: Add the repository secret `CODESIGN_CERT_BASE64` and `CODESIGN_CERT_PASSWORD`. The workflow will automatically sign `FlitKey.exe` and `FlitKey-Setup-*.exe`.
+3. **SmartScreen Reputation (Free)**: Submit clean release binaries to [Microsoft Defender Security Intelligence](https://www.microsoft.com/en-us/wdsi/filesubmit) under **Software Developer -> Incorrectly detected as malware/untrusted** to accelerate reputation whitelist approval.
+

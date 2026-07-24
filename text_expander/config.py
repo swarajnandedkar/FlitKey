@@ -93,11 +93,32 @@ def save_state(snippets: list[Snippet], settings: Settings) -> None:
 def export_state(destination: Path) -> None:
     """Export the local user data for access/portability requests."""
     snippets, settings = load_state()
-    payload = {
-        "snippets": [snippet.to_dict() for snippet in snippets],
-        "settings": settings.to_dict(),
-    }
+    payload = {"snippets": [snippet.to_dict() for snippet in snippets], "settings": settings.to_dict()}
     atomic_write_json(destination, payload)
+
+
+def import_state(source: Path) -> None:
+    """Import user data from a previously exported JSON file, replacing current state."""
+    if not source.exists():
+        raise FileNotFoundError(f"Import file does not exist: {source}")
+    try:
+        with source.open("r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, JSONDecodeError) as e:
+        raise ValueError(f"Failed to read import file: {e}")
+    # Validate structure
+    if not isinstance(payload, dict):
+        raise ValueError("Import payload must be a JSON object.")
+    raw_snippets = payload.get("snippets", [])
+    if not isinstance(raw_snippets, list):
+        raw_snippets = []
+    snippets = [Snippet.from_dict(item) for item in raw_snippets if isinstance(item, dict)]
+    settings_payload = payload.get("settings", {})
+    if not isinstance(settings_payload, dict):
+        settings_payload = {}
+    settings = Settings.from_dict(settings_payload)
+    # Write to config, overwriting existing data
+    atomic_write_json(config_path(), {"snippets": [s.to_dict() for s in snippets], "settings": settings.to_dict()})
 
 
 def delete_state() -> bool:

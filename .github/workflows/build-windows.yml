@@ -48,8 +48,21 @@ jobs:
             choco install innosetup --yes --no-progress
           }
 
+      - name: Decode Code Signing Certificate (Optional)
+        if: ${{ secrets.CODESIGN_CERT_BASE64 != '' }}
+        shell: pwsh
+        run: |
+          $certBytes = [System.Convert]::FromBase64String("${{ secrets.CODESIGN_CERT_BASE64 }}")
+          [System.IO.File]::WriteAllBytes("$env:RUNNER_TEMP\certificate.pfx", $certBytes)
+          Write-Host "Code signing certificate loaded into runner temporary path."
+
       - name: Build installer
+        shell: pwsh
+        env:
+          CODESIGN_CERT_PATH: ${{ secrets.CODESIGN_CERT_BASE64 != '' && format('{0}\certificate.pfx', runner.temp) || '' }}
+          CODESIGN_CERT_PASSWORD: ${{ secrets.CODESIGN_CERT_PASSWORD }}
         run: python build_windows.py
+
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4

@@ -79,7 +79,22 @@ sudo apt install desktop-file-utils dpkg
 
 ### Windows Support
 
-FlitKey includes a native Windows backend for typed keyword expansion, global hotkeys, Unicode text insertion, system tray controls, and per-user startup. A self-contained 64-bit Windows 10/11 installer can be built with `python build_windows.py` on Windows or downloaded from the GitHub Actions artifact. See [WINDOWS.md](WINDOWS.md) for detailed build instructions and Windows specific behavior.
+FlitKey includes a native Windows backend for typed keyword expansion, global hotkeys, Unicode text insertion, system tray controls, and per-user startup. A self-contained 64-bit Windows 10/11 installer can be built with `python build_windows.py` on Windows or downloaded from GitHub Releases / Actions artifacts.
+
+*Note: Unsigned releases may show a Microsoft Defender SmartScreen warning on first launch ("Unknown Publisher"). See [WINDOWS.md](WINDOWS.md) for build instructions, code signing configuration, and SmartScreen safety details.*
+
+
+### Chrome Extension (Browser Support)
+
+FlitKey includes a standalone Manifest V3 Chrome Extension located in the `chrome_extension/` directory.
+
+To install the extension in Google Chrome, Brave, or Edge:
+1. Open Chrome and navigate to `chrome://extensions/`.
+2. Enable **Developer mode** using the toggle in the top right corner.
+3. Click **Load unpacked** and select the `chrome_extension/` directory.
+4. Access FlitKey via the extension toolbar icon or press `Ctrl+Shift+K` to open the quick insert popup!
+
+See [CHROMEWEBSTORE.md](chrome_extension/CHROMEWEBSTORE.md) for store publishing guidelines and privacy documentation.
 
 ### Security and Privacy
 
