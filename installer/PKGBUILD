@@ -1,0 +1,17 @@
+# Maintainer: Swaraj Nandedkar <swaraj@flitkey.xyz>
+pkgname=flitkey-bin
+pkgver=0.4.0
+pkgrel=1
+pkgdesc="100% offline, local-first GUI text expander for Linux (X11 & Wayland) and Windows"
+arch=('x86_64' 'any')
+url="https://flitkey.xyz"
+license=('MIT')
+depends=('python' 'python-pyqt6' 'xdotool' 'xinput' 'x11-xserver-utils')
+provides=('flitkey')
+conflicts=('flitkey')
+source=("https://github.com/swarajnandedkar/FlitKey/releases/download/v${pkgver}/flitkey_${pkgver}_all.deb")
+sha256sums=('SKIP')
+
+package() {
+  tar -xf data.tar.xz -C "${pkgdir}"
+}
