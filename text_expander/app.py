@@ -9,10 +9,12 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QMenu, QMessageBox, QSyst
 from .branding import APP_NAME, ICON_FILE
 from .config import load_state, save_state
 from .gui.main_window import MainWindow
+from .gui.packs_dialog import PacksDialog
 from .gui.picker_dialog import SnippetPickerDialog
 from .gui.snippet_dialog import SnippetDialog
 from .importers import import_snippets_from_file
 from .models import Snippet
+from .packs import load_pack_snippets, merge_pack_snippets
 from .platform import install_launcher, set_autostart
 from .placeholders import render_placeholders
 from .runtime.factory import create_backend
@@ -28,7 +30,6 @@ class AppController(QObject):
         self.window.update_snippets(self.snippets)
         self.window.update_settings(self.settings)
 
-
         self.backend = create_backend()
         self.window.update_capabilities(self.backend.capability_report)
 
@@ -42,6 +43,7 @@ class AppController(QObject):
         self.window.delete_requested.connect(self.delete_snippet)
         self.window.toggle_requested.connect(self.toggle_snippet)
         self.window.import_requested.connect(self.import_snippets)
+        self.window.packs_requested.connect(self.open_expansion_packs)
         self.window.pause_toggled.connect(self.set_paused)
         self.window.autostart_toggled.connect(self.set_autostart_enabled)
         self.window.picker_requested.connect(self.open_picker)
@@ -62,7 +64,7 @@ class AppController(QObject):
 
     def _load_icon(self) -> QIcon:
         assets_dir = Path(__file__).resolve().parent.parent / "assets"
-        for name in ("flitkey.png", "flitkey.svg", "icon.png", "icon.svg"):
+        for name in ("new-flitkey-logo.png", "flitkey.png", "icon.png", "flitkey.svg"):
             candidate = assets_dir / name
             if candidate.exists():
                 icon = QIcon(str(candidate))
@@ -178,6 +180,26 @@ class AppController(QObject):
                 self.window,
                 "Import Error",
                 f"Could not import snippets from file:\n{error}",
+            )
+
+    def open_expansion_packs(self) -> None:
+        dialog = PacksDialog(self.window)
+        if dialog.exec():
+            selected_packs, filter_os = dialog.get_selected_packs()
+            if not selected_packs:
+                return
+            target_platform = None if filter_os else "all"
+            new_snippets: list[Snippet] = []
+            for pack in selected_packs:
+                new_snippets.extend(load_pack_snippets(pack.file_path, target_platform=target_platform))
+
+            updated_snippets, added_count = merge_pack_snippets(self.snippets, new_snippets)
+            self.snippets = updated_snippets
+            self._persist_and_reload()
+            QMessageBox.information(
+                self.window,
+                "Expansion Packs Installed",
+                f"Successfully installed expansion packs!\nAdded {added_count} new snippet(s).",
             )
 
 

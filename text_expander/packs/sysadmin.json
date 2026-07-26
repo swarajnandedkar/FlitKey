@@ -1,0 +1,50 @@
+{
+  "pack_id": "sysadmin",
+  "name": "System Admin & DevOps Pack",
+  "description": "System diagnostic commands, Windows OS info, cURL test templates, and Kubernetes status triggers.",
+  "version": "1.0.0",
+  "snippets": [
+    {
+      "label": "Linux: System Diagnostics",
+      "trigger_type": "keyword",
+      "keyword": ":sysinfo",
+      "expansion_text": "uname -a && lsb_release -a && df -h && free -h",
+      "platform": "linux"
+    },
+    {
+      "label": "Linux: Systemd Service Status",
+      "trigger_type": "keyword",
+      "keyword": ":sysd",
+      "expansion_text": "sudo systemctl status {{clipboard}}",
+      "platform": "linux"
+    },
+    {
+      "label": "Windows: OS Summary",
+      "trigger_type": "keyword",
+      "keyword": ":wininfo",
+      "expansion_text": "Get-ComputerInfo | Select-Object WindowsProductName, OsVersion, OsArchitecture",
+      "platform": "windows"
+    },
+    {
+      "label": "Windows: Listening Ports",
+      "trigger_type": "keyword",
+      "keyword": ":winnet",
+      "expansion_text": "netstat -ano | findstr LISTEN",
+      "platform": "windows"
+    },
+    {
+      "label": "DevOps: cURL POST JSON",
+      "trigger_type": "keyword",
+      "keyword": ":curljson",
+      "expansion_text": "curl -X POST \"{{clipboard}}\" -H \"Content-Type: application/json\" -d '{}'",
+      "platform": "all"
+    },
+    {
+      "label": "DevOps: Kubernetes Pods Status",
+      "trigger_type": "keyword",
+      "keyword": ":k8spods",
+      "expansion_text": "kubectl get pods -n kube-system -o wide",
+      "platform": "all"
+    }
+  ]
+}

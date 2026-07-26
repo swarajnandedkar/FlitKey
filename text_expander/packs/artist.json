@@ -1,0 +1,57 @@
+{
+  "pack_id": "artist",
+  "name": "Artist, Designer & Creator Pack",
+  "description": "Color palette specifications, aspect ratio tables, Midjourney/AI generator flags, UI handoff notes, and asset delivery templates.",
+  "version": "1.0.0",
+  "snippets": [
+    {
+      "label": "Design: Color Palette Spec",
+      "trigger_type": "keyword",
+      "keyword": ":palette",
+      "expansion_text": "Primary: #0F172A | Secondary: #3B82F6 | Accent: #10B981 | Light: #F8FAFC",
+      "platform": "all"
+    },
+    {
+      "label": "Design: Aspect Ratios",
+      "trigger_type": "keyword",
+      "keyword": ":aspect",
+      "expansion_text": "16:9 (1920x1080) | 4:3 (1440x1080) | 1:1 (1080x1080) | 9:16 (1080x1920)",
+      "platform": "all"
+    },
+    {
+      "label": "AI Art: Midjourney Flags",
+      "trigger_type": "keyword",
+      "keyword": ":midprompt",
+      "expansion_text": "--v 6.0 --ar 16:9 --style raw --q 2 --s 250 --no blur, distortion",
+      "platform": "all"
+    },
+    {
+      "label": "Copyright: Artwork Handoff Notice",
+      "trigger_type": "keyword",
+      "keyword": ":copynotice",
+      "expansion_text": "© {{date}} [Artist/Studio Name]. All Rights Reserved. Created with [Software].",
+      "platform": "all"
+    },
+    {
+      "label": "Figma: UI Handoff Notes",
+      "trigger_type": "keyword",
+      "keyword": ":figspec",
+      "expansion_text": "🎨 **Design Specs**\n• Font: Inter / System UI\n• Spacing Unit: 8px grid\n• Tokens: {{clipboard}}",
+      "platform": "all"
+    },
+    {
+      "label": "Social: Design Hashtags",
+      "trigger_type": "keyword",
+      "keyword": ":hashtags",
+      "expansion_text": "#digitalart #conceptart #design #illustration #uiux #render #3dart",
+      "platform": "all"
+    },
+    {
+      "label": "Handoff: Asset Delivery Link",
+      "trigger_type": "keyword",
+      "keyword": ":assetlink",
+      "expansion_text": "Here are the final design assets for review:\n📁 Drive Link: {{clipboard}}\n📅 Delivered on: {{date}}",
+      "platform": "all"
+    }
+  ]
+}

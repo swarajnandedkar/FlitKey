@@ -1,0 +1,50 @@
+{
+  "pack_id": "support",
+  "name": "Customer Support & Sales Pack",
+  "description": "Canned support greetings, bug gathering forms, ticket resolution templates, meeting notes, and sales outreach.",
+  "version": "1.0.0",
+  "snippets": [
+    {
+      "label": "Support: Greeting",
+      "trigger_type": "keyword",
+      "keyword": ":cshi",
+      "expansion_text": "Hi {{clipboard}},\n\nThank you for contacting customer support! I'd be happy to help you with this.",
+      "platform": "all"
+    },
+    {
+      "label": "Support: Bug Report Gathering",
+      "trigger_type": "keyword",
+      "keyword": ":csbug",
+      "expansion_text": "To help us investigate, could you please provide:\n1. Your OS (Windows/Linux/macOS)\n2. App Version\n3. Steps to reproduce the issue\n4. Screenshot/Logs: {{clipboard}}",
+      "platform": "all"
+    },
+    {
+      "label": "Support: Ticket Follow-up",
+      "trigger_type": "keyword",
+      "keyword": ":csfollowup",
+      "expansion_text": "Hi {{clipboard}},\n\nJust checking in to see if your issue has been resolved or if you need further assistance?",
+      "platform": "all"
+    },
+    {
+      "label": "Support: Ticket Resolution",
+      "trigger_type": "keyword",
+      "keyword": ":csclose",
+      "expansion_text": "Glad we could help! If you have any further questions, feel free to reply to this thread.",
+      "platform": "all"
+    },
+    {
+      "label": "Sales: Outreach Intro",
+      "trigger_type": "keyword",
+      "keyword": ":coldout",
+      "expansion_text": "Hi {{clipboard}},\n\nI noticed your recent work on project scaling and wanted to introduce FlitKey...",
+      "platform": "all"
+    },
+    {
+      "label": "Productivity: Meeting Notes Template",
+      "trigger_type": "keyword",
+      "keyword": ":meeting",
+      "expansion_text": "📅 **Meeting Notes - {{date}}**\n👥 **Attendees:** \n🎯 **Agenda:** \n✅ **Action Items:**\n - [ ] {{clipboard}}",
+      "platform": "all"
+    }
+  ]
+}

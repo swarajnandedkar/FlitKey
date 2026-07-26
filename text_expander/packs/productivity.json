@@ -1,0 +1,57 @@
+{
+  "pack_id": "productivity",
+  "name": "Everyday Productivity & Symbols Pack",
+  "description": "Timestamps, verification stamps, emoji shortcodes, fancy bullet points, and workflow symbols.",
+  "version": "1.0.0",
+  "snippets": [
+    {
+      "label": "Productivity: Verification Stamp",
+      "trigger_type": "keyword",
+      "keyword": ":stamp",
+      "expansion_text": "[Verified on {{date}} at {{time}}]",
+      "platform": "all"
+    },
+    {
+      "label": "Productivity: ISO Timestamp",
+      "trigger_type": "keyword",
+      "keyword": ":iso",
+      "expansion_text": "{{date}}T{{time}}",
+      "platform": "all"
+    },
+    {
+      "label": "Emoji: Shrug",
+      "trigger_type": "keyword",
+      "keyword": ":shrug",
+      "expansion_text": "¯\\_(ツ)_/¯",
+      "platform": "all"
+    },
+    {
+      "label": "Emoji: Table Flip",
+      "trigger_type": "keyword",
+      "keyword": ":tableflip",
+      "expansion_text": "(╯°□°)╯︵ ┻━┻",
+      "platform": "all"
+    },
+    {
+      "label": "Symbols: Fancy Bullets",
+      "trigger_type": "keyword",
+      "keyword": ":bullets",
+      "expansion_text": "✦ Option 1\n✦ Option 2\n✦ Option 3",
+      "platform": "all"
+    },
+    {
+      "label": "Symbols: Navigation Arrows",
+      "trigger_type": "keyword",
+      "keyword": ":arrows",
+      "expansion_text": "← ↑ → ↓ ➔ ▶",
+      "platform": "all"
+    },
+    {
+      "label": "Symbols: Status Badges",
+      "trigger_type": "keyword",
+      "keyword": ":symbols",
+      "expansion_text": "✅ Passed | ❌ Failed | ⚠️ Warning | ℹ️ Info",
+      "platform": "all"
+    }
+  ]
+}
