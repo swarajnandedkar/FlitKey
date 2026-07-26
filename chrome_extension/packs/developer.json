@@ -1,0 +1,78 @@
+{
+  "pack_id": "developer",
+  "name": "Developer & Engineering Pack",
+  "description": "Essential git workflows, code snippets, bash/powershell headers, markdown formatting, and docker templates.",
+  "version": "1.0.0",
+  "snippets": [
+    {
+      "label": "Git: Commit Message",
+      "trigger_type": "keyword",
+      "keyword": ":gcm",
+      "expansion_text": "git commit -m \"{{clipboard}}\"",
+      "platform": "all"
+    },
+    {
+      "label": "Git: Checkout New Branch",
+      "trigger_type": "keyword",
+      "keyword": ":gcb",
+      "expansion_text": "git checkout -b ",
+      "platform": "all"
+    },
+    {
+      "label": "Git: Graph Log",
+      "trigger_type": "keyword",
+      "keyword": ":glog",
+      "expansion_text": "git log --oneline --graph --all -n 10",
+      "platform": "all"
+    },
+    {
+      "label": "JS: Console Log",
+      "trigger_type": "keyword",
+      "keyword": ":clog",
+      "expansion_text": "console.log('DEBUG [{{time}}]:', {{clipboard}});",
+      "platform": "all"
+    },
+    {
+      "label": "Python: Function Template",
+      "trigger_type": "keyword",
+      "keyword": ":pydef",
+      "expansion_text": "def function_name(param: str) -> None:\n    \"\"\"Brief description.\n\n    Args:\n        param: Description.\n    \"\"\"\n    pass",
+      "platform": "all"
+    },
+    {
+      "label": "Linux: Bash Header",
+      "trigger_type": "keyword",
+      "keyword": ":shebang",
+      "expansion_text": "#!/usr/bin/env bash\nset -euo pipefail\n",
+      "platform": "linux"
+    },
+    {
+      "label": "Windows: PowerShell Header",
+      "trigger_type": "keyword",
+      "keyword": ":pshead",
+      "expansion_text": "# Requires -Version 5.1\n[CmdletBinding()]\nParam(\n    [Parameter(Mandatory=$true)]\n    [string]$Path\n)",
+      "platform": "windows"
+    },
+    {
+      "label": "Markdown: Code Block",
+      "trigger_type": "keyword",
+      "keyword": ":mdcode",
+      "expansion_text": "```\n{{clipboard}}\n```",
+      "platform": "all"
+    },
+    {
+      "label": "Markdown: Table",
+      "trigger_type": "keyword",
+      "keyword": ":mdtable",
+      "expansion_text": "| Header 1 | Header 2 | Header 3 |\n| :--- | :---: | ---: |\n| Item 1 | Item 2 | Item 3 |",
+      "platform": "all"
+    },
+    {
+      "label": "Docker: Compose Template",
+      "trigger_type": "keyword",
+      "keyword": ":docker",
+      "expansion_text": "version: '3.8'\nservices:\n  app:\n    build: .\n    ports:\n      - \"8080:8080\"",
+      "platform": "all"
+    }
+  ]
+}

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlitKey Snippet Manager & Settings</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      background-color: var(--bg-color);
+      min-height: 100vh;
+      padding: 30px;
+    }
+    .options-container {
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .options-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--card-bg);
+      padding: 20px 24px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+    .options-title {
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 24px;
+    }
+    @media (max-width: 768px) {
+      .options-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .panel {
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .panel-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .table-container {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    th {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    tr:hover {
+      background-color: var(--bg-color);
+    }
+    .setting-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .setting-item:last-child {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="options-container">
+    <!-- Header -->
+    <header class="options-header">
+      <div class="brand">
+        <img src="icons/icon-48.png" alt="FlitKey Logo" class="brand-icon">
+        <div>
+          <h1 class="options-title">FlitKey Manager</h1>
+          <p style="color: var(--text-muted); font-size: 13px;">Manage your snippets, triggers, and extension settings</p>
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button id="btn-export" class="btn">📥 Export JSON</button>
+        <button id="btn-import-trigger" class="btn">📤 Import...</button>
+        <input type="file" id="file-import" accept=".json,.yml,.yaml,.ahk,.csv,.tsv,.txt" style="display: none;">
+        <button id="btn-add-main" class="btn btn-primary">+ Add Snippet</button>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="options-grid">
+      <!-- Snippets List Panel -->
+      <section class="panel">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <h2 class="panel-title">Snippets Library</h2>
+          <input type="text" id="search-main" class="search-input" placeholder="Search snippets..." style="width: 240px;">
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Label</th>
+                <th>Trigger</th>
+                <th>Expansion Preview</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Settings & Utilities Panel -->
+      <aside class="panel">
+        <h2 class="panel-title">Preferences</h2>
+
+        <div class="setting-item">
+          <div>
+            <div style="font-weight: 600;">Case Sensitivity</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Match keyword triggers exact case</div>
+          </div>
+          <input type="checkbox" id="chk-case-sensitive">
+        </div>
+
+        <div class="setting-item">
+          <div>
+            <div style="font-weight: 600;">Show Expansion Toast</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Notification when snippet expands</div>
+          </div>
+          <input type="checkbox" id="chk-show-toast">
+        </div>
+
+        <div class="setting-item">
+          <div>
+            <div style="font-weight: 600;">Pause All Triggers</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Temporarily disable text expansion</div>
+          </div>
+          <input type="checkbox" id="chk-paused">
+        </div>
+
+        <div style="margin-top: 20px;">
+          <h3 class="panel-title" style="font-size: 14px; margin-bottom: 8px;">Dynamic Placeholders Reference</h3>
+          <ul style="font-size: 12px; color: var(--text-muted); padding-left: 18px; line-height: 1.8;">
+            <li><code>{{date}}</code> - Current Date (YYYY-MM-DD)</li>
+            <li><code>{{time}}</code> - Current Time (HH:MM)</li>
+            <li><code>{{datetime}}</code> - Date and Time</li>
+            <li><code>{{clipboard}}</code> - Injects Clipboard Text</li>
+            <li><code>{{cursor}}</code> - Sets final cursor position</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Shared Modal Dialog for Edit -->
+  <div id="modal-overlay" class="modal-overlay">
+    <div class="modal-card">
+      <h3 id="modal-title">Add New Snippet</h3>
+
+      <div class="form-group">
+        <label class="form-label">Label</label>
+        <input type="text" id="input-label" class="form-control" placeholder="e.g. Current Date">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Trigger Type</label>
+        <select id="input-trigger-type" class="form-control">
+          <option value="keyword">Typed Keyword</option>
+          <option value="hotkey">Global Hotkey</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="group-keyword">
+        <label class="form-label">Keyword Trigger</label>
+        <input type="text" id="input-keyword" class="form-control" placeholder="e.g. !date">
+      </div>
+
+      <div class="form-group" id="group-hotkey" style="display: none;">
+        <label class="form-label">Hotkey Trigger</label>
+        <input type="text" id="input-hotkey" class="form-control" placeholder="e.g. Ctrl+Shift+D">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Expansion Text</label>
+        <textarea id="input-expansion" class="form-control" placeholder="Text to expand. Supports {{date}}, {{time}}, {{datetime}}, {{clipboard}}, {{cursor}}"></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button id="btn-cancel-modal" class="btn">Cancel</button>
+        <button id="btn-save-modal" class="btn btn-primary">Save Snippet</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="lib/storage.js"></script>
+  <script src="lib/importers.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

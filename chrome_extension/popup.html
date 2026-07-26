@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlitKey Snippets</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      width: 380px;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="brand">
+      <img src="icons/icon-48.png" alt="FlitKey Logo" class="brand-icon">
+      <span class="brand-title">FlitKey</span>
+    </div>
+    <div class="header-actions">
+      <button id="btn-pause" class="btn btn-sm" title="Pause/Resume FlitKey Expansion">Pause</button>
+      <button id="btn-add" class="btn btn-primary btn-sm">+ Add</button>
+      <button id="btn-options" class="btn btn-icon btn-sm" title="Open Full Manager">⚙️</button>
+    </div>
+  </header>
+
+  <!-- Search Filter -->
+  <div class="search-container">
+    <input type="text" id="search-input" class="search-input" placeholder="Search snippets by label or keyword...">
+  </div>
+
+  <!-- Snippet List -->
+  <main id="snippet-list" class="snippet-list">
+    <!-- Dynamic snippet cards injected via popup.js -->
+  </main>
+
+  <!-- Add/Edit Modal -->
+  <div id="modal-overlay" class="modal-overlay">
+    <div class="modal-card">
+      <h3 id="modal-title">Add New Snippet</h3>
+
+      <div class="form-group">
+        <label class="form-label">Label</label>
+        <input type="text" id="input-label" class="form-control" placeholder="e.g. Current Date">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Trigger Type</label>
+        <select id="input-trigger-type" class="form-control">
+          <option value="keyword">Typed Keyword</option>
+          <option value="hotkey">Global Hotkey</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="group-keyword">
+        <label class="form-label">Keyword Trigger</label>
+        <input type="text" id="input-keyword" class="form-control" placeholder="e.g. !date">
+      </div>
+
+      <div class="form-group" id="group-hotkey" style="display: none;">
+        <label class="form-label">Hotkey Trigger</label>
+        <input type="text" id="input-hotkey" class="form-control" placeholder="e.g. Ctrl+Shift+D">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Expansion Text</label>
+        <textarea id="input-expansion" class="form-control" placeholder="Text to expand. Supports {{date}}, {{time}}, {{datetime}}, {{clipboard}}, {{cursor}}"></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button id="btn-cancel-modal" class="btn">Cancel</button>
+        <button id="btn-save-modal" class="btn btn-primary">Save Snippet</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="lib/storage.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

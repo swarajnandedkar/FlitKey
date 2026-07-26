@@ -1,0 +1,78 @@
+{
+  "pack_id": "ai_prompts",
+  "name": "AI Chatbot & Prompt Engineering Pack",
+  "description": "Essential prompts for ChatGPT, Claude, Gemini & local LLMs including persona setup, code refactoring, bug analysis, and summarization.",
+  "version": "1.0.0",
+  "snippets": [
+    {
+      "label": "AI Persona: Senior Architect",
+      "trigger_type": "keyword",
+      "keyword": ":airole",
+      "expansion_text": "Act as a senior software engineer and principal architect. Provide concise, clean, production-ready code with minimal fluff.",
+      "platform": "all"
+    },
+    {
+      "label": "AI: Explain Code Simply",
+      "trigger_type": "keyword",
+      "keyword": ":aixplain",
+      "expansion_text": "Explain the following code step-by-step in simple terms, highlighting key logic and potential edge cases:\n\n{{clipboard}}",
+      "platform": "all"
+    },
+    {
+      "label": "AI: Refactor Code",
+      "trigger_type": "keyword",
+      "keyword": ":airefactor",
+      "expansion_text": "Refactor the following code for improved performance, readability, and modern best practices. Include comments explaining key improvements:\n\n{{clipboard}}",
+      "platform": "all"
+    },
+    {
+      "label": "AI: Analyze Bug & Debug Log",
+      "trigger_type": "keyword",
+      "keyword": ":aibug",
+      "expansion_text": "I encountered this error:\n```\n{{clipboard}}\n```\nPlease analyze the root cause, explain why it occurred, and provide the exact fixed code block.",
+      "platform": "all"
+    },
+    {
+      "label": "AI: Unit Test Generator",
+      "trigger_type": "keyword",
+      "keyword": ":aitest",
+      "expansion_text": "Generate comprehensive unit tests covering edge cases, invalid inputs, and mock data for the following code:\n\n{{clipboard}}",
+      "platform": "all"
+    },
+    {
+      "label": "AI: Summarize Text",
+      "trigger_type": "keyword",
+      "keyword": ":aisummary",
+      "expansion_text": "Summarize the key points, action items, and takeaways from the text below into concise bullet points:\n\n{{clipboard}}",
+      "platform": "all"
+    },
+    {
+      "label": "AI: Proofread & Fix Tone",
+      "trigger_type": "keyword",
+      "keyword": ":aigrammar",
+      "expansion_text": "Proofread and rewrite the following text for clarity, professional tone, and grammatical accuracy:\n\n{{clipboard}}",
+      "platform": "all"
+    },
+    {
+      "label": "AI: Format as Clean JSON",
+      "trigger_type": "keyword",
+      "keyword": ":aijson",
+      "expansion_text": "Respond strictly with a valid JSON object matching the requested schema. Do not include markdown preamble or conversational text:\n\n{{clipboard}}",
+      "platform": "all"
+    },
+    {
+      "label": "AI: Refine & Improve Prompt",
+      "trigger_type": "keyword",
+      "keyword": ":aiprompt",
+      "expansion_text": "Improve and refine the following prompt to make it specific, unambiguous, and optimized for an LLM:\n\n\"{{clipboard}}\"",
+      "platform": "all"
+    },
+    {
+      "label": "AI: Translate to English",
+      "trigger_type": "keyword",
+      "keyword": ":aitranslate",
+      "expansion_text": "Translate the following text accurately into clear, natural, native-level English:\n\n{{clipboard}}",
+      "platform": "all"
+    }
+  ]
+}
