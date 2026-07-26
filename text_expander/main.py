@@ -5,11 +5,13 @@ import sys
 from PyQt6.QtWidgets import QApplication
 
 from .app import AppController
+from .theme import apply_theme
 
 
 def main() -> int:
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
+    apply_theme(app)
     controller = AppController(app)
     start_minimized = "--minimized" in sys.argv[1:]
     controller.show_initial_window(start_minimized=start_minimized)
