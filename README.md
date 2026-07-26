@@ -24,7 +24,8 @@ Built with **Python** and **PyQt6**, FlitKey operates completely locally and dyn
 
 ## Key Features
 
-*   **Snippet Manager**: A clean PyQt6 interface to manage, preview, and toggle snippet triggers.
+*   **Expansion Packs Manager**: Instant access to pre-built, domain-specific snippet expansion packs for AI Chatbot prompts, Developers, Artists & Designers, Customer Support, System Admins, and Everyday Productivity.
+*   **Snippet Manager**: A clean PyQt6 interface to manage, preview, toggle, edit, and search snippet triggers.
 *   **Live Search Filter**: Real-time filtering in the main snippet manager to find snippets by label, type, keyword, or preview text.
 *   **X11 & Windows Keyword Triggers**: Automatically detects typed keywords and expands them in place.
 *   **Global Hotkeys**: Triggers expansions via custom key combinations (e.g. `Ctrl+Alt+A`).
@@ -38,10 +39,7 @@ Built with **Python** and **PyQt6**, FlitKey operates completely locally and dyn
 ## Interface & Screenshots
 
 ### Main Window & Snippet Manager
-![FlitKey Main Window](assets/main_window.png)
-
-### Snippet Editor
-![FlitKey Snippet Editor](assets/snippet_editor.png)
+![FlitKey Main Window](assets/flitkey-ui-preview.png)
 
 ---
 
@@ -163,6 +161,26 @@ FlitKey renders dynamic placeholders at the time of expansion. Use the following
 
 ---
 
+## 📦 Built-in Expansion Packs
+
+FlitKey includes pre-built expansion packs for common domains. You can enable them with a single click by clicking **Expansion Packs...** in the main window.
+
+| Expansion Pack | Category | Description | Sample Triggers |
+| --- | --- | --- | --- |
+| **🤖 AI Chatbot & Prompt Engineering** | AI Prompts | Prompts for ChatGPT, Claude, Gemini, and LLMs | `:airole`, `:aixplain`, `:airefactor`, `:aibug`, `:aitest`, `:aisummary` |
+| **💻 Developer & Engineering** | Software / Code | Git workflows, code templates, headers, & Docker | `:gcm`, `:gcb`, `:clog`, `:pydef`, `:shebang`, `:pshead`, `:mdtable` |
+| **🎨 Artist, Designer & Creator** | Design & Media | Color palettes, aspect ratios, Midjourney flags | `:palette`, `:aspect`, `:midprompt`, `:copynotice`, `:figspec` |
+| **🎧 Customer Support & Sales** | Business / Support | Canned greetings, bug reports, and follow-ups | `:cshi`, `:csbug`, `:csfollowup`, `:csclose`, `:coldout`, `:meeting` |
+| **⚡ System Admin & DevOps** | System / DevOps | Linux diagnostics, Windows info, cURL templates | `:sysinfo`, `:sysd`, `:wininfo`, `:winnet`, `:curljson`, `:k8spods` |
+| **✍️ Everyday Productivity** | General | ISO timestamps, verification stamps, emoji & symbols | `:stamp`, `:iso`, `:shrug`, `:tableflip`, `:bullets`, `:arrows` |
+
+### Custom User Expansion Packs
+You can drop custom `.json` expansion pack files into your user pack directory to share snippets across your team:
+* **Linux**: `~/.config/flitkey/packs/`
+* **Windows**: `%APPDATA%\flitkey\packs\`
+
+---
+
 ## Frequently Asked Questions (FAQ)
 
 ### Does FlitKey support Wayland?
@@ -196,10 +214,12 @@ Snippets are stored locally as plain-text JSON in `~/.config/flitkey/config.json
 │   ├── config.py            # Local JSON storage & configuration migration
 │   ├── importers.py         # Multi-format snippet importer (Espanso, AHK, CSV, JSON)
 │   ├── models.py            # Snippet, settings, and capability models
+│   ├── packs.py             # Expansion pack listing, loading, and merging engine
+│   ├── packs/               # Built-in expansion pack JSON files (AI, Dev, Artist, etc.)
 │   ├── placeholders.py      # Dynamic placeholder parsing engine
 │   ├── platform.py          # OS environment & desktop launcher helpers
 │   ├── theme.py             # App styling guidelines
-│   ├── gui/                 # PyQt6 window and dialog components
+│   ├── gui/                 # PyQt6 window and dialog components (including PacksDialog)
 │   └── runtime/             # Platform runtime backends (X11, Wayland, & Windows)
 ├── tests/                   # Automated unit test suite
 ├── build_deb.py             # Debian package builder
