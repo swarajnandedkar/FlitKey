@@ -98,9 +98,16 @@ X-GNOME-Autostart-enabled=true
 
 
 def copy_icon() -> None:
-    source = ROOT / "assets" / "flitkey.svg"
-    target = PIXMAPS_DIR / f"{PACKAGE_NAME}.svg"
-    shutil.copy2(source, target)
+    source_png = ROOT / "assets" / "flitkey.png"
+    if not source_png.exists():
+        source_png = ROOT / "assets" / "new-flitkey-logo.png"
+    target_png = PIXMAPS_DIR / f"{PACKAGE_NAME}.png"
+    if source_png.exists():
+        shutil.copy2(source_png, target_png)
+
+    source_svg = ROOT / "assets" / "flitkey.svg"
+    if source_svg.exists():
+        shutil.copy2(source_svg, PIXMAPS_DIR / f"{PACKAGE_NAME}.svg")
 
 
 def build_package() -> None:

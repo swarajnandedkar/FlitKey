@@ -24,7 +24,7 @@ def _run(command: list[str]) -> None:
 
 
 def _create_windows_icon() -> None:
-    """Rasterize the existing SVG into an ICO used by PyInstaller and Inno."""
+    """Rasterize the app logo into an ICO used by PyInstaller and Inno Setup."""
     from PyQt6.QtCore import QSize
     from PyQt6.QtGui import QGuiApplication, QIcon
 
@@ -33,7 +33,12 @@ def _create_windows_icon() -> None:
     if owns_application:
         application = QGuiApplication(["flitkey-icon-builder"])
     try:
-        icon = QIcon(str(ASSETS_DIR / "flitkey.svg"))
+        icon_source = ASSETS_DIR / "new-flitkey-logo.png"
+        if not icon_source.exists():
+            icon_source = ASSETS_DIR / "flitkey.png"
+        if not icon_source.exists():
+            icon_source = ASSETS_DIR / "flitkey.svg"
+        icon = QIcon(str(icon_source))
         pixmap = icon.pixmap(QSize(256, 256))
         if pixmap.isNull() or not pixmap.save(str(ICON_PATH), "ICO"):
             raise RuntimeError("Qt could not write the Windows ICO icon")
