@@ -30,4 +30,10 @@ Thumbs.db
 # Excluded project files
 flitkey-website/
 COMPLIANCE_READINESS.md
+TYPEFLOW_GTM_STRATEGY.md
+TypeFlux_GTM_Strategy.md
+product_plan.md
 
+# Marketing site (deployed separately) and its local backups
+FlitKey HP/
+FlitKey HP.*/
