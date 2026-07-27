@@ -17,7 +17,7 @@ Built with **Python** and **PyQt6**, FlitKey operates completely locally and dyn
 | **Dependencies** | `python3-pyqt6`, `xdotool`, `xinput`, `x11-xserver-utils` (for Linux X11) |
 | **Configuration Path** | `~/.config/flitkey/config.json` (Linux) / `%APPDATA%\flitkey\config.json` (Windows) |
 | **License** | [MIT License](LICENSE) |
-| **Current Version** | `0.4.0` |
+| **Current Version** | `0.5.0` |
 
 
 ---
@@ -110,7 +110,7 @@ FlitKey is local-first and currently has no hosted account, telemetry, or centra
    ```
 2. Install the generated package:
    ```bash
-   sudo apt install ./dist/flitkey_0.3.0_all.deb
+   sudo apt install ./dist/flitkey_0.5.0_all.deb
    ```
 3. Run the application:
    ```bash

@@ -1,6 +1,6 @@
 # Maintainer: Swaraj Nandedkar <swaraj@flitkey.xyz>
 pkgname=flitkey-bin
-pkgver=0.4.0
+pkgver=0.5.0
 pkgrel=1
 pkgdesc="100% offline, local-first GUI text expander for Linux (X11 & Wayland) and Windows"
 arch=('x86_64' 'any')

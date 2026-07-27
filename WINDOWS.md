@@ -18,7 +18,7 @@ python build_windows.py
 Install Inno Setup 6 before the build. The resulting file is:
 
 ```text
-dist\windows\FlitKey-Setup-0.4.0-x64.exe
+dist\windows\FlitKey-Setup-0.5.0-x64.exe
 ```
 
 The build uses PyInstaller for the application directory and Inno Setup for the installable `.exe`. The generated application includes the Qt runtime and does not require Python on the target machine.

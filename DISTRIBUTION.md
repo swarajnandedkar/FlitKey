@@ -26,8 +26,8 @@ This document summarizes the release artifacts and step-by-step submission check
 
 ### A. Debian / Ubuntu `.deb` Package
 - **Build Command**: `python3 build_deb.py`
-- **Output Artifact**: `dist/flitkey_0.4.0_all.deb`
-- **Install Command**: `sudo dpkg -i dist/flitkey_0.4.0_all.deb`
+- **Output Artifact**: `dist/flitkey_0.5.0_all.deb`
+- **Install Command**: `sudo dpkg -i dist/flitkey_0.5.0_all.deb`
 
 ### B. Arch Linux User Repository (AUR)
 - **Manifest File**: [`installer/PKGBUILD`](file:///home/swaraj/Desktop/Projects/Linux%20aText%20Tool/installer/PKGBUILD)
@@ -35,7 +35,7 @@ This document summarizes the release artifacts and step-by-step submission check
   1. Clone your AUR package repo: `git clone ssh://aur@aur.archlinux.org/flitkey-bin.git`
   2. Copy `installer/PKGBUILD` into the repository.
   3. Generate `.SRCINFO`: `makepkg --printsrcinfo > .SRCINFO`
-  4. Commit and push: `git add PKGBUILD .SRCINFO && git commit -m "Release v0.4.0" && git push`
+  4. Commit and push: `git add PKGBUILD .SRCINFO && git commit -m "Release v0.5.0" && git push`
 
 ### C. Flathub (Flatpak)
 - **Manifest File**: [`installer/xyz.flitkey.FlitKey.json`](file:///home/swaraj/Desktop/Projects/Linux%20aText%20Tool/installer/xyz.flitkey.FlitKey.json)
@@ -48,7 +48,7 @@ This document summarizes the release artifacts and step-by-step submission check
 ## 3. Windows Release & SmartScreen Whitelisting
 
 - **Build Script**: [`build_windows.py`](file:///home/swaraj/Desktop/Projects/Linux%20aText%20Tool/build_windows.py)
-- **Output Executable**: `dist/windows/FlitKey-Setup-0.4.0-x64.exe`
+- **Output Executable**: `dist/windows/FlitKey-Setup-0.5.0-x64.exe`
 - **Signing Hook**: Pass environment variables `$env:CODESIGN_CERT_PATH` and `$env:CODESIGN_CERT_PASSWORD` during local build or set GitHub secrets `CODESIGN_CERT_BASE64` and `CODESIGN_CERT_PASSWORD` for CI builds.
 - **SmartScreen Reputation Approval**: Submit clean binaries to [Microsoft Defender Security Intelligence](https://www.microsoft.com/en-us/wdsi/filesubmit) under *Software Developer -> Incorrectly detected as malware/untrusted* to accelerate reputation whitelisting.
 
