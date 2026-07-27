@@ -25,6 +25,9 @@ permissions:
 jobs:
   windows-installer:
     runs-on: windows-latest
+    env:
+      CODESIGN_CERT_BASE64: ${{ secrets.CODESIGN_CERT_BASE64 }}
+      CODESIGN_CERT_PASSWORD: ${{ secrets.CODESIGN_CERT_PASSWORD }}
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -48,21 +51,24 @@ jobs:
             choco install innosetup --yes --no-progress
           }
 
+      # The secrets context is not available in step-level `if:`, so the
+      # certificate is passed through job env and the steps test that instead.
       - name: Decode Code Signing Certificate (Optional)
-        if: ${{ secrets.CODESIGN_CERT_BASE64 != '' }}
+        if: env.CODESIGN_CERT_BASE64 != ''
         shell: pwsh
         run: |
-          $certBytes = [System.Convert]::FromBase64String("${{ secrets.CODESIGN_CERT_BASE64 }}")
+          $certBytes = [System.Convert]::FromBase64String($env:CODESIGN_CERT_BASE64)
           [System.IO.File]::WriteAllBytes("$env:RUNNER_TEMP\certificate.pfx", $certBytes)
           Write-Host "Code signing certificate loaded into runner temporary path."
 
       - name: Build installer
         shell: pwsh
-        env:
-          CODESIGN_CERT_PATH: ${{ secrets.CODESIGN_CERT_BASE64 != '' && format('{0}\certificate.pfx', runner.temp) || '' }}
-          CODESIGN_CERT_PASSWORD: ${{ secrets.CODESIGN_CERT_PASSWORD }}
-        run: python build_windows.py
-
+        run: |
+          $cert = Join-Path $env:RUNNER_TEMP "certificate.pfx"
+          if (Test-Path $cert) {
+            $env:CODESIGN_CERT_PATH = $cert
+          }
+          python build_windows.py
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
@@ -79,10 +85,10 @@ jobs:
           RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
           $exe = (Get-ChildItem "dist/windows/FlitKey-Setup-*-x64.exe").FullName
-          if (gh release view "$env:RELEASE_TAG" 2>$null) {
-            gh release upload "$env:RELEASE_TAG" "$exe" --clobber
-          } else {
-            gh release create "$env:RELEASE_TAG" "$exe" --title "FlitKey $env:RELEASE_TAG" --notes "FlitKey Release $env:RELEASE_TAG"
-          }
+          # Create only if missing, then upload, so the step stays idempotent
+          # and safe when a release is published while CI runs.
+          gh release create "$env:RELEASE_TAG" --title "FlitKey $env:RELEASE_TAG" --notes "FlitKey Release $env:RELEASE_TAG" 2>$null
+          if ($LASTEXITCODE -ne 0) { Write-Host "Release $env:RELEASE_TAG already exists; uploading asset to it." }
+          gh release upload "$env:RELEASE_TAG" "$exe" --clobber
 
 

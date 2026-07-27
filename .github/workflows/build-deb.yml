@@ -48,8 +48,7 @@ jobs:
           RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
           DEB_FILE=$(ls dist/flitkey_*_all.deb)
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" "$DEB_FILE" --clobber
-          else
-            gh release create "$RELEASE_TAG" "$DEB_FILE" --title "FlitKey $RELEASE_TAG" --notes "FlitKey Release $RELEASE_TAG"
-          fi
+          # Create only if missing, then upload. Doing it in this order keeps the
+          # step idempotent and safe when a release is published while CI runs.
+          gh release create "$RELEASE_TAG" --title "FlitKey $RELEASE_TAG" --notes "FlitKey Release $RELEASE_TAG" || true
+          gh release upload "$RELEASE_TAG" "$DEB_FILE" --clobber
