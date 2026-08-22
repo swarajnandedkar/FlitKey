@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import stat
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,7 +13,12 @@ from text_expander import config
 from text_expander.models import Settings, Snippet
 
 
+# Pins the XDG layout and POSIX file modes; config uses %APPDATA% on Windows.
+XDG_ONLY = unittest.skipIf(sys.platform == "win32", "relies on XDG_CONFIG_HOME layout")
+
+
 class ComplianceControlTests(unittest.TestCase):
+    @XDG_ONLY
     def test_config_is_private_and_supports_export_and_deletion(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch.dict(os.environ, {"XDG_CONFIG_HOME": tmpdir}, clear=False):

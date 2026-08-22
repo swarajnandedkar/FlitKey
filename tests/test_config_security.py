@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,8 +11,13 @@ from unittest.mock import patch
 from text_expander import config
 from text_expander.models import Settings, Snippet
 
+# These tests pin the XDG_CONFIG_HOME layout, which config._config_home()
+# deliberately ignores on Windows (it uses %APPDATA% there).
+XDG_ONLY = unittest.skipIf(sys.platform == "win32", "relies on XDG_CONFIG_HOME layout")
+
 
 class ConfigSecurityTests(unittest.TestCase):
+    @XDG_ONLY
     def test_load_state_ignores_malformed_json(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch.dict(os.environ, {"XDG_CONFIG_HOME": tmpdir}, clear=False):
@@ -25,6 +31,7 @@ class ConfigSecurityTests(unittest.TestCase):
                 self.assertIsInstance(settings, Settings)
                 self.assertFalse(settings.autostart)
 
+    @XDG_ONLY
     def test_load_state_ignores_unexpected_shapes(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch.dict(os.environ, {"XDG_CONFIG_HOME": tmpdir}, clear=False):
@@ -37,6 +44,7 @@ class ConfigSecurityTests(unittest.TestCase):
                 self.assertEqual(snippets, [])
                 self.assertIsInstance(settings, Settings)
 
+    @XDG_ONLY
     def test_save_state_preserves_untrusted_text_without_execution(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch.dict(os.environ, {"XDG_CONFIG_HOME": tmpdir}, clear=False):
@@ -54,6 +62,7 @@ class ConfigSecurityTests(unittest.TestCase):
                 snippets, _ = config.load_state()
                 self.assertEqual(snippets[0].expansion_text, snippet.expansion_text)
 
+    @XDG_ONLY
     def test_legacy_config_migrates_to_flitkey_path(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             with patch.dict(os.environ, {"XDG_CONFIG_HOME": tmpdir}, clear=False):
