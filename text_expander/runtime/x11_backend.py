@@ -5,7 +5,7 @@ import subprocess
 import threading
 import time
 
-from ..models import CapabilityReport, Snippet
+from ..models import CapabilityReport, Snippet, normalize_hotkey
 from ..placeholders import render_placeholders
 from ..platform import probe_binary
 from .base import RuntimeBackend
@@ -13,6 +13,24 @@ from .base import RuntimeBackend
 
 class X11Backend(RuntimeBackend):
     _DETAIL_RE = re.compile(r"detail:\s+(\d+)")
+    _KEYMAP_REFRESH_INTERVAL = 2.0
+
+    # Keys that move the cursor or otherwise invalidate what's on screen,
+    # mirroring the Windows backend's _BUFFER_RESET_VKS.
+    _BUFFER_RESET_SYMBOLS = frozenset(
+        {
+            "Left",
+            "Right",
+            "Up",
+            "Down",
+            "Home",
+            "End",
+            "Prior",
+            "Next",
+            "Delete",
+            "Escape",
+        }
+    )
 
     def __init__(self) -> None:
         self.keymap = self._load_keymap()
@@ -46,6 +64,12 @@ class X11Backend(RuntimeBackend):
         self._pressed_keycodes: set[int] = set()
         self._modifier_keycodes = self._detect_modifier_keycodes()
         self._suppress_until = 0.0
+        # True while an xdotool expansion round-trip is in flight; prevents
+        # keystrokes queued during injection from re-triggering the snippet.
+        self._expanding = False
+        # Keymap is rebuilt by the listener thread on layout change; readers
+        # take a snapshot reference so they always see a consistent map.
+        self._keymap_lock = threading.RLock()
 
     def _load_keymap(self) -> dict[int, tuple[str, str]]:
         try:
@@ -85,36 +109,76 @@ class X11Backend(RuntimeBackend):
                 modifiers["super"].add(keycode)
         return modifiers
 
+    def _maybe_reload_keymap(self) -> None:
+        """Re-run xmodmap if the keymap changed (layout switch, remap).
+
+        Cheap enough to run periodically: one subprocess call every
+        _KEYMAP_REFRESH_INTERVAL seconds at most. Also rebuilds the
+        modifier-keycode sets so hotkey detection tracks the new map.
+        """
+        fresh = self._load_keymap()
+        if not fresh:
+            return
+        with self._keymap_lock:
+            if fresh == self.keymap:
+                return
+            self.keymap = fresh
+            self._modifier_keycodes = self._detect_modifier_keycodes()
+            # Buffer may contain characters decoded under the old layout.
+            self._buffer = ""
+        self.status_changed.emit("Keyboard layout changed; keymap refreshed.")
+
     def start(self, snippets: list[Snippet], case_sensitive: bool) -> None:
-        self._snippets = snippets
-        self._case_sensitive = case_sensitive
+        with self._state_lock:
+            self._snippets = list(snippets)
+            self._case_sensitive = case_sensitive
         if not all(self.required_tools.values()):
             self.status_changed.emit(self.capability_report.status_message)
             return
-        if self._running:
-            return
-
-        self._running = True
-        self._process = subprocess.Popen(
-            ["xinput", "test-xi2", "--root"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-        )
+        with self._state_lock:
+            if self._running:
+                return
+            self._running = True
+            self._process = subprocess.Popen(
+                ["xinput", "test-xi2", "--root"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+            )
         self._thread = threading.Thread(target=self._read_events, daemon=True)
         self._thread.start()
         self.status_changed.emit(self.capability_report.status_message)
 
+    def reload(self, snippets: list[Snippet], case_sensitive: bool) -> None:
+        # Snippets are snapshotted under the lock by every handler, so a
+        # running listener can pick up new data without being torn down —
+        # no keystroke gap, no xinput respawn per edit.
+        if self._is_running():
+            with self._state_lock:
+                self._snippets = list(snippets)
+                self._case_sensitive = case_sensitive
+            return
+        self.stop()
+        self.start(snippets, case_sensitive)
+
     def stop(self) -> None:
-        self._running = False
-        if self._process and self._process.poll() is None:
-            self._process.terminate()
+        with self._state_lock:
+            self._running = False
+            process = self._process
+            self._process = None
+        if process and process.poll() is None:
+            process.terminate()
             try:
-                self._process.wait(timeout=1)
+                process.wait(timeout=1)
             except subprocess.TimeoutExpired:
-                self._process.kill()
-        self._process = None
+                process.kill()
+        if self._thread and self._thread is not threading.current_thread():
+            self._thread.join(timeout=2.0)
+        self._thread = None
+        with self._state_lock:
+            self._buffer = ""
+            self._pressed_keycodes.clear()
 
     def can_inject_text(self) -> bool:
         return self.required_tools.get("xdotool", False)
@@ -122,7 +186,8 @@ class X11Backend(RuntimeBackend):
     def inject_text(self, text: str, preserve_trailing_newline: bool = True) -> bool:
         if not self.can_inject_text():
             return False
-        self._suppress_until = time.time() + 0.5
+        with self._state_lock:
+            self._suppress_until = time.time() + 0.5
         rendered = render_placeholders(text)
         if not preserve_trailing_newline:
             rendered = self._strip_single_trailing_newline(rendered)
@@ -138,6 +203,8 @@ class X11Backend(RuntimeBackend):
             move_left = 0
 
         try:
+            # --clearmodifiers releases held keys so injected text isn't
+            # shifted/controlled; xdotool restores them after typing.
             subprocess.run(
                 ["xdotool", "type", "--clearmodifiers", "--delay", "1", typed_text],
                 check=True,
@@ -163,14 +230,34 @@ class X11Backend(RuntimeBackend):
         return text
 
     def _read_events(self) -> None:
-        assert self._process and self._process.stdout
+        with self._state_lock:
+            process = self._process
+        if not process or not process.stdout:
+            return
+        stream = process.stdout
         current_event: str | None = None
         current_detail: int | None = None
-        for line in self._process.stdout:
-            if not self._running:
+        last_keymap_check = time.time()
+        for line in stream:
+            if not self._is_running():
                 break
+            # Periodically refresh the keymap so layout switches and
+            # remaps are picked up without an app restart.
+            if time.time() - last_keymap_check >= self._KEYMAP_REFRESH_INTERVAL:
+                last_keymap_check = time.time()
+                self._maybe_reload_keymap()
+
             stripped = line.strip()
-            if stripped.startswith("EVENT type 13"):
+            # EVENT type 4/5 are XI2 raw button press/release; a mouse click
+            # moves the cursor, so the typed-text buffer is no longer valid.
+            if stripped.startswith("EVENT type 4"):
+                current_event = "button_press"
+                current_detail = None
+            elif stripped.startswith("EVENT type 5"):
+                current_event = None
+                current_detail = None
+                self._buffer = ""
+            elif stripped.startswith("EVENT type 13"):
                 current_event = "raw_press"
                 current_detail = None
             elif stripped.startswith("EVENT type 14"):
@@ -187,29 +274,42 @@ class X11Backend(RuntimeBackend):
                     current_event = None
                     current_detail = None
 
+    def _is_running(self) -> bool:
+        with self._state_lock:
+            return self._running and self._process is not None
+
     def _handle_press(self, keycode: int) -> None:
-        self._pressed_keycodes.add(keycode)
-        if self._paused or time.time() < self._suppress_until:
-            return
+        with self._state_lock:
+            self._pressed_keycodes.add(keycode)
+            if self._paused or time.time() < self._suppress_until:
+                return
 
-        if self._is_hotkey_match(keycode):
-            return
+            if self._is_hotkey_match(keycode):
+                return
 
-        text = self._keycode_to_text(keycode)
-        if text is None:
-            return
-        if text == "\b":
-            self._buffer = self._buffer[:-1]
-            return
-        if text in {"\n", "\t"}:
-            self._buffer = ""
-            return
+            # Navigation/clearing keys invalidate the on-screen text the buffer
+            # is modelling, same as the Windows backend.
+            symbols = self.keymap.get(keycode)
+            if symbols and symbols[0] in self._BUFFER_RESET_SYMBOLS:
+                self._buffer = ""
+                return
 
-        self._buffer = (self._buffer + text)[-100:]
+            text = self._keycode_to_text(keycode)
+            if text is None:
+                return
+            if text == "\b":
+                self._buffer = self._buffer[:-1]
+                return
+            if text in {"\n", "\t"}:
+                self._buffer = ""
+                return
+
+            self._buffer = (self._buffer + text)[-100:]
         self._check_keyword_match()
 
     def _handle_release(self, keycode: int) -> None:
-        self._pressed_keycodes.discard(keycode)
+        with self._state_lock:
+            self._pressed_keycodes.discard(keycode)
 
     def _is_hotkey_match(self, keycode: int) -> bool:
         key_name = self._hotkey_name_for_keycode(keycode)
@@ -224,7 +324,7 @@ class X11Backend(RuntimeBackend):
         if self._pressed_keycodes & self._modifier_keycodes["shift"]:
             active_modifiers.append("Shift")
         if self._pressed_keycodes & self._modifier_keycodes["super"]:
-            active_modifiers.append("Super")
+            active_modifiers.append("Win")
 
         pressed = "+".join(active_modifiers + [key_name])
         for snippet in self._snippets:
@@ -237,20 +337,16 @@ class X11Backend(RuntimeBackend):
             return True
         return False
 
-    def _normalize_hotkey(self, value: str) -> str:
-        parts = [part.strip().title() for part in value.split("+") if part.strip()]
-        if not parts:
-            return ""
-        key = parts[-1].upper() if len(parts[-1]) == 1 else parts[-1].title()
-        mods_order = ["Ctrl", "Alt", "Shift", "Super"]
-        modifiers = sorted(
-            parts[:-1],
-            key=lambda item: mods_order.index(item) if item in mods_order else 99
-        )
-        return "+".join(modifiers + [key])
+    # Shared normalizer lives in models so duplicate detection and
+    # trigger matching can never diverge.
+    _normalize_hotkey = staticmethod(normalize_hotkey)
 
     def _hotkey_name_for_keycode(self, keycode: int) -> str | None:
         symbols = self.keymap.get(keycode)
+        if not symbols:
+            # Unknown keycode: the layout may have changed since startup.
+            self._maybe_reload_keymap()
+            symbols = self.keymap.get(keycode)
         if not symbols:
             return None
         primary = symbols[0]
@@ -268,6 +364,10 @@ class X11Backend(RuntimeBackend):
 
     def _keycode_to_text(self, keycode: int) -> str | None:
         symbols = self.keymap.get(keycode)
+        if not symbols:
+            # Unknown keycode: the layout may have changed since startup.
+            self._maybe_reload_keymap()
+            symbols = self.keymap.get(keycode)
         if not symbols:
             return None
 
@@ -316,22 +416,31 @@ class X11Backend(RuntimeBackend):
         return translation.get(symbol)
 
     def _check_keyword_match(self) -> None:
-        buffer_value = self._buffer if self._case_sensitive else self._buffer.lower()
-        matches = []
-        for snippet in self._snippets:
-            if not snippet.enabled or snippet.trigger_type != "keyword" or not snippet.keyword:
-                continue
-            keyword = snippet.keyword if self._case_sensitive else snippet.keyword.lower()
-            if buffer_value.endswith(keyword):
-                matches.append((len(keyword), snippet))
-        if not matches:
-            return
-        _, snippet = max(matches, key=lambda item: item[0])
-        self._expand_keyword(snippet)
+        with self._state_lock:
+            if self._expanding:
+                return
+            buffer_value = self._buffer if self._case_sensitive else self._buffer.lower()
+            matches = []
+            for snippet in self._snippets:
+                if not snippet.enabled or snippet.trigger_type != "keyword" or not snippet.keyword:
+                    continue
+                keyword = snippet.keyword if self._case_sensitive else snippet.keyword.lower()
+                if buffer_value.endswith(keyword):
+                    matches.append((len(keyword), snippet))
+            if not matches:
+                return
+            _, snippet = max(matches, key=lambda item: item[0])
+            # Claim the expansion so queued keypresses during the xdotool
+            # round-trip cannot trigger a second (duplicate) expansion.
+            self._expanding = True
+        try:
+            self._expand_keyword(snippet)
+        finally:
+            with self._state_lock:
+                self._expanding = False
 
     def _expand_keyword(self, snippet: Snippet) -> None:
         trigger_length = len(snippet.keyword)
-        self._suppress_until = time.time() + 0.6
         try:
             subprocess.run(
                 ["xdotool", "key", "--clearmodifiers", *["BackSpace"] * trigger_length],
@@ -342,5 +451,6 @@ class X11Backend(RuntimeBackend):
         except (FileNotFoundError, subprocess.CalledProcessError):
             return
         self.inject_text(snippet.expansion_text, preserve_trailing_newline=False)
-        self._buffer = ""
+        with self._state_lock:
+            self._buffer = ""
         self.snippet_triggered.emit(snippet.label)

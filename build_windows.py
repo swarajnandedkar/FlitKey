@@ -11,6 +11,7 @@ from text_expander.branding import APP_NAME, APP_VERSION
 
 ROOT = Path(__file__).resolve().parent
 ASSETS_DIR = ROOT / "assets"
+PACKS_DIR = ROOT / "text_expander" / "packs"
 WINDOWS_BUILD_DIR = ROOT / "build" / "windows"
 PYINSTALLER_DIST_DIR = WINDOWS_BUILD_DIR / "dist"
 PYINSTALLER_WORK_DIR = WINDOWS_BUILD_DIR / "work"
@@ -121,6 +122,8 @@ def build() -> Path:
             str(ICON_PATH),
             "--add-data",
             f"{ASSETS_DIR};assets",
+            "--add-data",
+            f"{PACKS_DIR};text_expander/packs",
             "--distpath",
             str(PYINSTALLER_DIST_DIR),
             "--workpath",
@@ -146,4 +149,3 @@ def build() -> Path:
 
 if __name__ == "__main__":
     build()
-

@@ -13,7 +13,11 @@ class WaylandBackend(RuntimeBackend):
             global_hotkeys_supported=False,
             tray_supported=True,
             autostart_supported=True,
-            status_message="Wayland session detected. Universal typed expansion is not available in this backend.",
+            status_message=(
+                "Wayland blocks global keystroke capture. Typed expansion is unavailable; "
+                "the quick-insert picker (tray menu) still works. For full typed expansion, "
+                "log into an \"X11\" or \"Xorg\" session at the login screen."
+            ),
         )
         super().__init__(report)
         self._snippets: list[Snippet] = []

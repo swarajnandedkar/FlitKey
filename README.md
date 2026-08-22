@@ -230,9 +230,12 @@ Snippets are stored locally as plain-text JSON in `~/.config/flitkey/config.json
 ```
 
 ### Running Tests
-Execute the unit test suite:
+Create a virtualenv once (system Python is externally managed on most distros),
+then run the suite with an offscreen Qt platform so no display is required:
 ```bash
-python3 -m unittest discover -s tests
+python3 -m venv .venv
+.venv/bin/pip install "PyQt6>=6.6,<7"
+QT_QPA_PLATFORM=offscreen .venv/bin/python -m unittest discover -s tests
 ```
 
 ---

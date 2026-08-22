@@ -5,7 +5,7 @@ import sys
 import threading
 from ctypes import wintypes
 
-from ..models import CapabilityReport, Snippet
+from ..models import CapabilityReport, Snippet, normalize_hotkey
 from ..placeholders import render_placeholders
 from .base import RuntimeBackend
 
@@ -186,6 +186,9 @@ class WindowsBackend(RuntimeBackend):
         self._thread_id = 0
         self._hook_handle: int | None = None
         self._hook_proc = None
+        # Cached foreground keyboard layout (see _current_layout).
+        self._layout_hwnd: int | None = None
+        self._layout: int = 0
         self._message_queue_ready = threading.Event()
         self._api_ready = False
         self._user32 = None
@@ -285,16 +288,17 @@ class WindowsBackend(RuntimeBackend):
         self._kernel32.GetModuleHandleW.restype = ctypes.c_void_p
 
     def start(self, snippets: list[Snippet], case_sensitive: bool) -> None:
-        self._snippets = snippets
-        self._case_sensitive = case_sensitive
-        self._buffer = ""
+        with self._state_lock:
+            self._snippets = list(snippets)
+            self._case_sensitive = case_sensitive
+            self._buffer = ""
         if not self._api_ready:
             self.status_changed.emit(self.capability_report.status_message)
             return
-        if self._running:
-            return
-
-        self._running = True
+        with self._state_lock:
+            if self._running:
+                return
+            self._running = True
         self._message_queue_ready.clear()
         self._thread = threading.Thread(
             target=self._run_message_loop,
@@ -304,15 +308,18 @@ class WindowsBackend(RuntimeBackend):
         self._thread.start()
 
     def stop(self) -> None:
-        self._running = False
+        with self._state_lock:
+            self._running = False
         self._message_queue_ready.wait(timeout=0.5)
-        if self._thread_id and self._user32 is not None:
-            self._user32.PostThreadMessageW(self._thread_id, self.WM_QUIT, 0, 0)
+        thread_id = self._thread_id
+        if thread_id and self._user32 is not None:
+            self._user32.PostThreadMessageW(thread_id, self.WM_QUIT, 0, 0)
         if self._thread and self._thread is not threading.current_thread():
             self._thread.join(timeout=2.0)
         self._thread = None
-        self._pressed_vks.clear()
-        self._buffer = ""
+        with self._state_lock:
+            self._pressed_vks.clear()
+            self._buffer = ""
 
     def can_inject_text(self) -> bool:
         return self._api_ready
@@ -355,7 +362,8 @@ class WindowsBackend(RuntimeBackend):
         assert self._hook_proc_type is not None
 
         message = MSG()
-        self._thread_id = int(self._kernel32.GetCurrentThreadId())
+        with self._state_lock:
+            self._thread_id = int(self._kernel32.GetCurrentThreadId())
         self._user32.PeekMessageW(
             ctypes.byref(message),
             None,
@@ -375,16 +383,17 @@ class WindowsBackend(RuntimeBackend):
         )
         if not self._hook_handle:
             error_code = ctypes.get_last_error()
-            self._running = False
+            with self._state_lock:
+                self._running = False
+                self._thread_id = 0
             self._set_capability_failure(
                 f"Could not start the Windows keyboard hook (error {error_code})."
             )
-            self._thread_id = 0
             return
 
         self.status_changed.emit("Windows backend ready.")
         try:
-            while self._running:
+            while self._is_running():
                 result = self._user32.GetMessageW(
                     ctypes.byref(message),
                     None,
@@ -400,8 +409,13 @@ class WindowsBackend(RuntimeBackend):
                 self._user32.UnhookWindowsHookEx(self._hook_handle)
             self._hook_handle = None
             self._hook_proc = None
-            self._thread_id = 0
-            self._running = False
+            with self._state_lock:
+                self._thread_id = 0
+                self._running = False
+
+    def _is_running(self) -> bool:
+        with self._state_lock:
+            return self._running
 
     def _keyboard_proc(self, code: int, message: int, event_pointer: int) -> int:
         if code < 0:
@@ -419,7 +433,8 @@ class WindowsBackend(RuntimeBackend):
                 if self._handle_key_down(event):
                     return 1
             elif message in {self.WM_KEYUP, self.WM_SYSKEYUP}:
-                self._pressed_vks.discard(int(event.vkCode))
+                with self._state_lock:
+                    self._pressed_vks.discard(int(event.vkCode))
         except Exception:
             # Native callbacks must never unwind through the Windows hook API.
             self._buffer = ""
@@ -440,42 +455,44 @@ class WindowsBackend(RuntimeBackend):
 
     def _handle_key_down(self, event: KBDLLHOOKSTRUCT) -> bool:
         vk_code = int(event.vkCode)
-        was_pressed = vk_code in self._pressed_vks
-        self._pressed_vks.add(vk_code)
+        with self._state_lock:
+            was_pressed = vk_code in self._pressed_vks
+            self._pressed_vks.add(vk_code)
 
-        if self._paused:
-            return False
-        if vk_code in self._MODIFIER_VKS:
-            if vk_code not in self._SHIFT_VKS:
+            if self._paused:
+                return False
+            if vk_code in self._MODIFIER_VKS:
+                if vk_code not in self._SHIFT_VKS:
+                    self._buffer = ""
+                return False
+
+            if not was_pressed and not self._altgr_active() and self._trigger_hotkey(vk_code):
                 self._buffer = ""
-            return False
+                return True
 
-        if not was_pressed and not self._altgr_active() and self._trigger_hotkey(vk_code):
-            self._buffer = ""
-            return True
+            if self._has_command_modifier():
+                self._buffer = ""
+                return False
+            if vk_code == self.VK_BACK:
+                self._buffer = self._buffer[:-1]
+                return False
+            if vk_code in self._BUFFER_RESET_VKS:
+                self._buffer = ""
+                return False
 
-        if self._has_command_modifier():
-            self._buffer = ""
-            return False
-        if vk_code == self.VK_BACK:
-            self._buffer = self._buffer[:-1]
-            return False
-        if vk_code in self._BUFFER_RESET_VKS:
-            self._buffer = ""
-            return False
-
-        typed_text = self._event_to_text(event)
-        if not typed_text:
-            return False
+            typed_text = self._event_to_text(event)
+            if not typed_text:
+                return False
 
 
-        self._buffer = (self._buffer + typed_text)[-100:]
-        snippet = self._matching_keyword()
+            self._buffer = (self._buffer + typed_text)[-100:]
+            snippet = self._matching_keyword()
         if snippet is None:
             return False
 
         if self._expand_keyword(snippet, typed_text):
-            self._buffer = ""
+            with self._state_lock:
+                self._buffer = ""
             self.snippet_triggered.emit(snippet.label)
             return True
         return False
@@ -495,7 +512,8 @@ class WindowsBackend(RuntimeBackend):
 
     def _expand_keyword(self, snippet: Snippet, final_text: str) -> bool:
         prior_count = max(0, len(snippet.keyword) - len(final_text))
-        visible_prefix = self._buffer[-len(snippet.keyword) : -len(final_text)]
+        with self._state_lock:
+            visible_prefix = self._buffer[-len(snippet.keyword) : -len(final_text)]
         if prior_count and not self._send_virtual_key(self.VK_BACK, prior_count):
             return False
         if self.inject_text(snippet.expansion_text, preserve_trailing_newline=False):
@@ -511,18 +529,21 @@ class WindowsBackend(RuntimeBackend):
         if not key_name:
             return False
 
-        modifiers: list[str] = []
-        if self._pressed_vks & self._CTRL_VKS:
-            modifiers.append("Ctrl")
-        if self._pressed_vks & self._ALT_VKS:
-            modifiers.append("Alt")
-        if self._pressed_vks & self._SHIFT_VKS:
-            modifiers.append("Shift")
-        if self._pressed_vks & self._WIN_VKS:
-            modifiers.append("Win")
+        with self._state_lock:
+            modifiers: list[str] = []
+            if self._pressed_vks & self._CTRL_VKS:
+                modifiers.append("Ctrl")
+            if self._pressed_vks & self._ALT_VKS:
+                modifiers.append("Alt")
+            if self._pressed_vks & self._SHIFT_VKS:
+                modifiers.append("Shift")
+            if self._pressed_vks & self._WIN_VKS:
+                modifiers.append("Win")
+            snippets = list(self._snippets)
+
         pressed = "+".join(modifiers + [key_name])
 
-        for snippet in self._snippets:
+        for snippet in snippets:
             if not snippet.enabled or snippet.trigger_type != "hotkey" or not snippet.hotkey:
                 continue
             if self.normalize_hotkey(snippet.hotkey) != self.normalize_hotkey(pressed):
@@ -533,51 +554,11 @@ class WindowsBackend(RuntimeBackend):
             return True
         return False
 
-    @classmethod
-    def normalize_hotkey(cls, value: str) -> str:
-        parts = [part.strip() for part in value.split("+") if part.strip()]
-        if not parts:
-            return ""
-
-        modifier_aliases = {
-            "ctrl": "Ctrl",
-            "control": "Ctrl",
-            "alt": "Alt",
-            "shift": "Shift",
-            "win": "Win",
-            "windows": "Win",
-            "super": "Win",
-        }
-        key_aliases = {
-            "return": "Enter",
-            "enter": "Enter",
-            "esc": "Escape",
-            "escape": "Escape",
-            "space": "Space",
-            "backspace": "Backspace",
-            "delete": "Delete",
-            "pageup": "PageUp",
-            "pagedown": "PageDown",
-        }
-
-        modifiers = {
-            modifier_aliases[part.lower()]
-            for part in parts[:-1]
-            if part.lower() in modifier_aliases
-        }
-        raw_key = parts[-1]
-        lowered_key = raw_key.lower()
-        if len(raw_key) == 1:
-            key = raw_key.upper()
-        elif lowered_key in key_aliases:
-            key = key_aliases[lowered_key]
-        elif lowered_key.startswith("f") and lowered_key[1:].isdigit():
-            key = lowered_key.upper()
-        else:
-            key = raw_key.title()
-
-        ordered = [name for name in ("Ctrl", "Alt", "Shift", "Win") if name in modifiers]
-        return "+".join(ordered + [key])
+    @staticmethod
+    def normalize_hotkey(value: str) -> str:
+        # Shared normalizer lives in models so duplicate detection and
+        # trigger matching can never diverge.
+        return normalize_hotkey(value)
 
     def _hotkey_name_for_vk(self, vk_code: int) -> str | None:
         if ord("0") <= vk_code <= ord("9") or ord("A") <= vk_code <= ord("Z"):
@@ -594,7 +575,12 @@ class WindowsBackend(RuntimeBackend):
         return bool(self._pressed_vks & (self._CTRL_VKS | self._ALT_VKS))
 
     def _altgr_active(self) -> bool:
-        return self.VK_RMENU in self._pressed_vks and bool(self._pressed_vks & self._CTRL_VKS)
+        # AltGr arrives as VK_RMENU; on most layouts Windows also synthesizes
+        # a left-Ctrl, but some layouts/drivers deliver RMENU alone. Treat any
+        # RMENU press as AltGr so non-US users get correct characters and
+        # working hotkeys (plain right-Alt users lose Alt-combos, matching
+        # how Windows itself treats AltGr keys).
+        return self.VK_RMENU in self._pressed_vks
 
     def _event_to_text(self, event: KBDLLHOOKSTRUCT) -> str | None:
         assert self._user32 is not None
@@ -613,9 +599,6 @@ class WindowsBackend(RuntimeBackend):
         keyboard_state[int(event.vkCode)] |= 0x80
 
         output = ctypes.create_unicode_buffer(8)
-        foreground_hwnd = self._user32.GetForegroundWindow()
-        foreground_thread = self._user32.GetWindowThreadProcessId(foreground_hwnd, None)
-        layout = self._user32.GetKeyboardLayout(foreground_thread or 0)
         count = self._user32.ToUnicodeEx(
             int(event.vkCode),
             int(event.scanCode),
@@ -623,11 +606,29 @@ class WindowsBackend(RuntimeBackend):
             output,
             len(output),
             self.TO_UNICODE_NO_STATE_CHANGE,
-            layout,
+            self._current_layout(),
         )
         if count <= 0:
             return None
         return "".join(output[:count])
+
+    def _current_layout(self) -> int:
+        """Cached foreground-window keyboard layout.
+
+        GetForegroundWindow + layout lookup on every keystroke adds measurable
+        latency inside the low-level hook (Windows silently unhooks laggy
+        hooks). The layout only changes when focus moves to another window or
+        the user switches layouts, so re-resolve only when either happens.
+        """
+        assert self._user32 is not None
+        hwnd = self._user32.GetForegroundWindow()
+        with self._state_lock:
+            if hwnd != self._layout_hwnd:
+                thread_id = self._user32.GetWindowThreadProcessId(hwnd, None)
+                layout = self._user32.GetKeyboardLayout(thread_id or 0)
+                self._layout_hwnd = hwnd
+                self._layout = int(layout)
+            return self._layout
 
 
     def _send_text(self, text: str) -> bool:

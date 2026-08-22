@@ -46,6 +46,7 @@ class MainWindow(QMainWindow):
     packs_requested = pyqtSignal()
     pause_toggled = pyqtSignal(bool)
     autostart_toggled = pyqtSignal(bool)
+    notify_toggled = pyqtSignal(bool)
     picker_requested = pyqtSignal()
 
     def __init__(self) -> None:
@@ -169,9 +170,11 @@ class MainWindow(QMainWindow):
         self.autostart_checkbox = QCheckBox("Launch at login")
         self.start_minimized_checkbox = QCheckBox("Start minimized to tray")
         self.case_sensitive_checkbox = QCheckBox("Case sensitive keywords")
+        self.notify_checkbox = QCheckBox("Notify on expansion")
 
         self.pause_checkbox.toggled.connect(self.pause_toggled.emit)
         self.autostart_checkbox.toggled.connect(self.autostart_toggled.emit)
+        self.notify_checkbox.toggled.connect(self.notify_toggled.emit)
 
         settings_grid = QGridLayout()
         settings_grid.setHorizontalSpacing(24)
@@ -180,6 +183,7 @@ class MainWindow(QMainWindow):
         settings_grid.addWidget(self.autostart_checkbox, 1, 0)
         settings_grid.addWidget(self.start_minimized_checkbox, 0, 1)
         settings_grid.addWidget(self.case_sensitive_checkbox, 1, 1)
+        settings_grid.addWidget(self.notify_checkbox, 2, 0)
         settings_grid.setColumnStretch(2, 1)
 
         settings_card = _card()
@@ -310,14 +314,17 @@ class MainWindow(QMainWindow):
         self.autostart_checkbox.blockSignals(True)
         self.start_minimized_checkbox.blockSignals(True)
         self.case_sensitive_checkbox.blockSignals(True)
+        self.notify_checkbox.blockSignals(True)
         self.pause_checkbox.setChecked(settings.paused)
         self.autostart_checkbox.setChecked(settings.autostart)
         self.start_minimized_checkbox.setChecked(settings.start_minimized)
         self.case_sensitive_checkbox.setChecked(settings.case_sensitive)
+        self.notify_checkbox.setChecked(settings.notify_on_expansion)
         self.pause_checkbox.blockSignals(False)
         self.autostart_checkbox.blockSignals(False)
         self.start_minimized_checkbox.blockSignals(False)
         self.case_sensitive_checkbox.blockSignals(False)
+        self.notify_checkbox.blockSignals(False)
 
     def update_capabilities(self, report: CapabilityReport) -> None:
         self.status_label.setText(report.status_message)

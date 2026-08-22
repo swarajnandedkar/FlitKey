@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import sys
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 from text_expander import platform
+
+POSIX_ONLY = unittest.skipIf(sys.platform == "win32", "desktop entries are POSIX-only")
 
 
 class PlatformSecurityTests(unittest.TestCase):
@@ -16,12 +19,14 @@ class PlatformSecurityTests(unittest.TestCase):
         self.assertIn('path with spaces', escaped)
         self.assertIn('\\"quoted\\"', escaped)
 
+    @POSIX_ONLY
     def test_launcher_command_quotes_workspace_paths(self) -> None:
         with patch.object(platform, "app_root", return_value=Path("/tmp/has spaces/app")):
             command = platform.launcher_command()
         self.assertIn('"/tmp/has spaces/app/run.py"', command)
         self.assertTrue(command.startswith('"'))
 
+    @POSIX_ONLY
     def test_desktop_entry_uses_quoted_exec_line(self) -> None:
         with patch.object(platform, "app_root", return_value=Path("/tmp/demo path")):
             content = platform.desktop_entry_content()

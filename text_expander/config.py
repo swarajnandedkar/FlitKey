@@ -117,8 +117,25 @@ def import_state(source: Path) -> None:
     if not isinstance(settings_payload, dict):
         settings_payload = {}
     settings = Settings.from_dict(settings_payload)
+    # Back up current data so an accidental import can be undone.
+    _backup_before_replace()
     # Write to config, overwriting existing data
     atomic_write_json(config_path(), {"snippets": [s.to_dict() for s in snippets], "settings": settings.to_dict()})
+
+
+def _backup_before_replace() -> None:
+    """Snapshot the current config next to itself before a destructive import."""
+    path = config_path()
+    if not path.exists():
+        return
+    from datetime import datetime
+
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    backup_path = app_config_dir() / f"config.backup-{stamp}.json"
+    try:
+        shutil.copy2(path, backup_path)
+    except OSError:
+        pass  # Best effort; never block the import over a backup failure.
 
 
 def delete_state() -> bool:

@@ -7,13 +7,13 @@ from PyQt6.QtGui import QAction, QGuiApplication, QIcon
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMenu, QMessageBox, QSystemTrayIcon
 
 from .branding import APP_NAME, ICON_FILE
-from .config import load_state, save_state
+from .config import delete_state, export_state, import_state, load_state, save_state
 from .gui.main_window import MainWindow
 from .gui.packs_dialog import PacksDialog
 from .gui.picker_dialog import SnippetPickerDialog
 from .gui.snippet_dialog import SnippetDialog
 from .importers import import_snippets_from_file
-from .models import Snippet
+from .models import Snippet, normalize_hotkey
 from .packs import load_pack_snippets, merge_pack_snippets
 from .platform import install_launcher, set_autostart
 from .placeholders import render_placeholders
@@ -46,11 +46,13 @@ class AppController(QObject):
         self.window.packs_requested.connect(self.open_expansion_packs)
         self.window.pause_toggled.connect(self.set_paused)
         self.window.autostart_toggled.connect(self.set_autostart_enabled)
+        self.window.notify_toggled.connect(self.set_notify_on_expansion)
         self.window.picker_requested.connect(self.open_picker)
 
 
         self.window.start_minimized_checkbox.toggled.connect(self._settings_checkbox_changed)
         self.window.case_sensitive_checkbox.toggled.connect(self._settings_checkbox_changed)
+        self.window.notify_checkbox.toggled.connect(self._settings_checkbox_changed)
         self.backend.status_changed.connect(self._update_status)
         self.backend.snippet_triggered.connect(self._notify_snippet_triggered)
 
@@ -91,6 +93,16 @@ class AppController(QObject):
         menu.addAction(show_action)
         menu.addAction(picker_action)
         menu.addAction(self.pause_action)
+        menu.addSeparator()
+        export_action = QAction("Export data…", menu)
+        import_backup_action = QAction("Import backup…", menu)
+        delete_data_action = QAction("Delete all data…", menu)
+        export_action.triggered.connect(self.export_data)
+        import_backup_action.triggered.connect(self.import_data)
+        delete_data_action.triggered.connect(self.delete_all_data)
+        menu.addAction(export_action)
+        menu.addAction(import_backup_action)
+        menu.addAction(delete_data_action)
         menu.addSeparator()
         menu.addAction(quit_action)
         return menu
@@ -215,6 +227,76 @@ class AppController(QObject):
         set_autostart(enabled)
         self._persist()
 
+    def set_notify_on_expansion(self, enabled: bool) -> None:
+        self.settings.notify_on_expansion = enabled
+        self._persist()
+
+    def export_data(self) -> None:
+        destination_str, _ = QFileDialog.getSaveFileName(
+            self.window,
+            "Export Data",
+            "flitkey-export.json",
+            "JSON (*.json);;All Files (*)",
+        )
+        if not destination_str:
+            return
+        try:
+            export_state(Path(destination_str))
+            QMessageBox.information(
+                self.window,
+                "Export Data",
+                f"Data exported to:\n{destination_str}",
+            )
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(self.window, "Export Data", f"Export failed:\n{error}")
+
+    def import_data(self) -> None:
+        source_str, _ = QFileDialog.getOpenFileName(
+            self.window,
+            "Import Backup",
+            "",
+            "JSON (*.json);;All Files (*)",
+        )
+        if not source_str:
+            return
+        confirm = QMessageBox.question(
+            self.window,
+            "Import Backup",
+            "Importing replaces ALL current snippets and settings.\n"
+            "A backup of the current data is saved first.\n\nContinue?",
+        )
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            import_state(Path(source_str))
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(self.window, "Import Backup", f"Import failed:\n{error}")
+            return
+        self.snippets, self.settings = load_state()
+        self._persist_and_reload()
+        QMessageBox.information(
+            self.window,
+            "Import Backup",
+            f"Imported {len(self.snippets)} snippet(s).",
+        )
+
+    def delete_all_data(self) -> None:
+        confirm = QMessageBox.question(
+            self.window,
+            "Delete All Data",
+            "This permanently deletes all snippets and settings from this device.\n\nContinue?",
+        )
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+        delete_state()
+        self.snippets, self.settings = [], self.settings.__class__()
+        self._persist_and_reload()
+        QMessageBox.information(
+            self.window,
+            "Delete All Data",
+            "All local data has been deleted.",
+        )
+
     def open_picker(self) -> None:
         dialog = SnippetPickerDialog(self.snippets, self.window)
         if not dialog.exec() or not dialog.selected_snippet:
@@ -229,11 +311,13 @@ class AppController(QObject):
         rendered_text = render_placeholders(snippet.expansion_text).replace("{{cursor}}", "")
         clipboard = QGuiApplication.clipboard()
         clipboard.setText(rendered_text)
-        self.tray.showMessage(f"{APP_NAME} copied text", f"{snippet.label} copied to clipboard.")
+        if self.settings.notify_on_expansion:
+            self.tray.showMessage(f"{APP_NAME} copied text", f"{snippet.label} copied to clipboard.")
 
     def _settings_checkbox_changed(self) -> None:
         self.settings.start_minimized = self.window.start_minimized_checkbox.isChecked()
         self.settings.case_sensitive = self.window.case_sensitive_checkbox.isChecked()
+        self.settings.notify_on_expansion = self.window.notify_checkbox.isChecked()
         self._persist()
         self.backend.reload(self.snippets, self.settings.case_sensitive)
 
@@ -252,11 +336,11 @@ class AppController(QObject):
     def _duplicate_hotkey(self, candidate: Snippet, exclude_id: str | None = None) -> bool:
         if candidate.trigger_type != "hotkey" or not candidate.hotkey:
             return False
-        normalized = candidate.hotkey.strip().lower()
+        normalized = normalize_hotkey(candidate.hotkey)
         for snippet in self.snippets:
             if snippet.id == exclude_id:
                 continue
-            if snippet.trigger_type == "hotkey" and snippet.hotkey.strip().lower() == normalized:
+            if snippet.trigger_type == "hotkey" and normalize_hotkey(snippet.hotkey) == normalized:
                 return True
         return False
 
@@ -268,6 +352,8 @@ class AppController(QObject):
             self.tray.setToolTip(APP_NAME)
 
     def _notify_snippet_triggered(self, label: str) -> None:
+        if not self.settings.notify_on_expansion:
+            return
         self.tray.showMessage(f"{APP_NAME} expanded a snippet", label)
 
     def _sync_pause_action(self) -> None:
