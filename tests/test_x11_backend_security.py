@@ -23,7 +23,21 @@ class X11BackendSecurityTests(unittest.TestCase):
         ):
             self.backend = X11Backend()
 
-    def test_inject_text_passes_untrusted_text_as_single_argument(self) -> None:
+    def test_inject_text_clipboard_passes_untrusted_text_safely(self) -> None:
+        inputs_received = []
+
+        def fake_run(cmd, input=None, **kwargs):
+            if input is not None:
+                inputs_received.append(input.decode("utf-8"))
+            return SimpleNamespace(returncode=0, stdout=b"")
+
+        payload = '$(touch /tmp/pwned); rm -rf / ; "quotes"'
+        with patch("text_expander.runtime.x11_backend.subprocess.run", side_effect=fake_run):
+            self.assertTrue(self.backend.inject_text(payload))
+
+        self.assertIn(payload, inputs_received)
+
+    def test_inject_text_fallback_typing_passes_untrusted_text_as_single_argument(self) -> None:
         calls = []
 
         def fake_run(cmd, **kwargs):
@@ -31,19 +45,23 @@ class X11BackendSecurityTests(unittest.TestCase):
             return SimpleNamespace(returncode=0)
 
         payload = '$(touch /tmp/pwned); rm -rf / ; "quotes"'
-        with patch("text_expander.runtime.x11_backend.subprocess.run", side_effect=fake_run):
-            self.assertTrue(self.backend.inject_text(payload))
+        with patch("text_expander.runtime.x11_backend.probe_binary", side_effect=lambda name: name == "xdotool"):
+            with patch("text_expander.runtime.x11_backend.subprocess.run", side_effect=fake_run):
+                self.assertTrue(self.backend.inject_text(payload))
 
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0][-1], payload)
         self.assertEqual(calls[0][:4], ["xdotool", "type", "--clearmodifiers", "--delay"])
 
-    def test_expand_keyword_passes_payload_as_single_argument(self) -> None:
+    def test_expand_keyword_passes_payload_safely(self) -> None:
         calls = []
+        inputs_received = []
 
-        def fake_run(cmd, **kwargs):
+        def fake_run(cmd, input=None, **kwargs):
             calls.append(cmd)
-            return SimpleNamespace(returncode=0)
+            if input is not None:
+                inputs_received.append(input.decode("utf-8"))
+            return SimpleNamespace(returncode=0, stdout=b"")
 
         snippet = Snippet(
             label="unsafe",
@@ -55,7 +73,7 @@ class X11BackendSecurityTests(unittest.TestCase):
             self.backend._expand_keyword(snippet)
 
         self.assertEqual(calls[0], ["xdotool", "key", "--clearmodifiers", "BackSpace", "BackSpace"])
-        self.assertEqual(calls[1][-1], snippet.expansion_text)
+        self.assertIn(snippet.expansion_text, inputs_received)
 
     def test_longest_keyword_match_wins(self) -> None:
         triggered = []

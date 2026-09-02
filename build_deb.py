@@ -33,6 +33,10 @@ def clean_dir(path: Path) -> None:
 def should_copy(path: Path) -> bool:
     if path.name in EXCLUDE_NAMES:
         return False
+    if path.name.startswith("FlitKey HP") or path.name.startswith("."):
+        return False
+    if path.name in {"chrome_extension", "tools"}:
+        return False
     if "GTM" in path.name:
         return False
     if path.suffix in EXCLUDE_SUFFIXES:
@@ -63,7 +67,7 @@ Section: utils
 Priority: optional
 Architecture: {ARCH}
 Maintainer: Local Build <local@example.com>
-Depends: python3, python3-pyqt6, xdotool, xinput, x11-xserver-utils
+Depends: python3, python3-pyqt6, xdotool, xinput, x11-xserver-utils, xclip
 Description: FlitKey desktop text expander
  FlitKey is a polished Linux desktop text expander with a modern GUI,
  tray integration, autostart support, X11 keyword expansion,

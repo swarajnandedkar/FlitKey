@@ -40,3 +40,7 @@ FlitKey HP.*/
 
 # Private founder publishing plan
 FOUNDER_X_STRATEGY.md
+
+# Agent artifacts
+.agents/
+skills-lock.json

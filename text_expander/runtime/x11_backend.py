@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+from pathlib import Path
 import re
 import subprocess
 import threading
@@ -13,7 +15,7 @@ from .base import RuntimeBackend
 
 class X11Backend(RuntimeBackend):
     _DETAIL_RE = re.compile(r"detail:\s+(\d+)")
-    _KEYMAP_REFRESH_INTERVAL = 2.0
+    _KEYMAP_REFRESH_INTERVAL = 30.0
 
     # Keys that move the cursor or otherwise invalidate what's on screen,
     # mirroring the Windows backend's _BUFFER_RESET_VKS.
@@ -32,6 +34,54 @@ class X11Backend(RuntimeBackend):
         }
     )
 
+    _TERMINAL_NAMES = frozenset(
+        {
+            "gnome-terminal",
+            "gnome-terminal-server",
+            "ptyxis",
+            "konsole",
+            "alacritty",
+            "kitty",
+            "wezterm-gui",
+            "xterm",
+            "uxterm",
+            "rxvt",
+            "urxvt",
+            "tilix",
+            "xfce4-terminal",
+            "terminator",
+            "foot",
+            "st",
+            "mate-terminal",
+            "lxterminal",
+            "qterminal",
+            "tilda",
+            "guake",
+            "yakuake",
+            "hyper",
+            "tabby",
+        }
+    )
+
+    _TERMINAL_CLASSES = frozenset(
+        {
+            "terminal",
+            "konsole",
+            "alacritty",
+            "kitty",
+            "wezterm",
+            "xterm",
+            "urxvt",
+            "tilix",
+            "terminator",
+            "ptyxis",
+            "qterminal",
+            "tilda",
+            "guake",
+            "yakuake",
+        }
+    )
+
     def __init__(self) -> None:
         self.keymap = self._load_keymap()
         self.required_tools = {
@@ -39,6 +89,7 @@ class X11Backend(RuntimeBackend):
             "xmodmap": probe_binary("xmodmap"),
             "xdotool": probe_binary("xdotool"),
         }
+        self.has_clipboard_tool = probe_binary("xclip") or probe_binary("xsel")
         ready = all(self.required_tools.values())
         report = CapabilityReport(
             session_type="x11",
@@ -64,7 +115,7 @@ class X11Backend(RuntimeBackend):
         self._pressed_keycodes: set[int] = set()
         self._modifier_keycodes = self._detect_modifier_keycodes()
         self._suppress_until = 0.0
-        # True while an xdotool expansion round-trip is in flight; prevents
+        # True while an expansion round-trip is in flight; prevents
         # keystrokes queued during injection from re-triggering the snippet.
         self._expanding = False
         # Keymap is rebuilt by the listener thread on layout change; readers
@@ -76,7 +127,8 @@ class X11Backend(RuntimeBackend):
             result = subprocess.run(
                 ["xmodmap", "-pke"],
                 check=True,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
                 text=True,
             )
         except (FileNotFoundError, subprocess.CalledProcessError):
@@ -112,9 +164,8 @@ class X11Backend(RuntimeBackend):
     def _maybe_reload_keymap(self) -> None:
         """Re-run xmodmap if the keymap changed (layout switch, remap).
 
-        Cheap enough to run periodically: one subprocess call every
-        _KEYMAP_REFRESH_INTERVAL seconds at most. Also rebuilds the
-        modifier-keycode sets so hotkey detection tracks the new map.
+        Runs on interval or when encountering unmapped keycodes.
+        Also rebuilds the modifier-keycode sets so hotkey detection tracks the new map.
         """
         fresh = self._load_keymap()
         if not fresh:
@@ -183,11 +234,125 @@ class X11Backend(RuntimeBackend):
     def can_inject_text(self) -> bool:
         return self.required_tools.get("xdotool", False)
 
+    def _get_clipboard(self) -> str | None:
+        if probe_binary("xclip"):
+            try:
+                res = subprocess.run(
+                    ["xclip", "-selection", "clipboard", "-o"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    timeout=0.5,
+                )
+                if res.returncode == 0:
+                    return res.stdout.decode("utf-8", errors="replace")
+            except Exception:
+                pass
+        if probe_binary("xsel"):
+            try:
+                res = subprocess.run(
+                    ["xsel", "--clipboard", "--output"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    timeout=0.5,
+                )
+                if res.returncode == 0:
+                    return res.stdout.decode("utf-8", errors="replace")
+            except Exception:
+                pass
+        return None
+
+    def _set_clipboard(self, text: str) -> bool:
+        encoded = text.encode("utf-8")
+        success = False
+        if probe_binary("xclip"):
+            try:
+                res1 = subprocess.run(
+                    ["xclip", "-selection", "clipboard"],
+                    input=encoded,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=1.0,
+                )
+                res2 = subprocess.run(
+                    ["xclip", "-selection", "primary"],
+                    input=encoded,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=1.0,
+                )
+                success = (res1.returncode == 0)
+            except Exception:
+                pass
+        if not success and probe_binary("xsel"):
+            try:
+                res1 = subprocess.run(
+                    ["xsel", "--clipboard", "--input"],
+                    input=encoded,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=1.0,
+                )
+                res2 = subprocess.run(
+                    ["xsel", "--primary", "--input"],
+                    input=encoded,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=1.0,
+                )
+                success = (res1.returncode == 0)
+            except Exception:
+                pass
+        return success
+
+    def _is_terminal_window(self) -> bool:
+        try:
+            pid_res = subprocess.run(
+                ["xdotool", "getactivewindow", "getwindowpid"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                timeout=0.3,
+            )
+            if pid_res.returncode == 0 and pid_res.stdout.strip().isdigit():
+                pid = int(pid_res.stdout.strip())
+                comm_path = Path(f"/proc/{pid}/comm")
+                if comm_path.exists():
+                    comm = comm_path.read_text(encoding="utf-8", errors="ignore").strip().lower()
+                    if any(term in comm for term in self._TERMINAL_NAMES):
+                        return True
+        except Exception:
+            pass
+
+        try:
+            win_res = subprocess.run(
+                ["xdotool", "getactivewindow"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                timeout=0.3,
+            )
+            if win_res.returncode == 0 and win_res.stdout.strip().isdigit():
+                win_id = win_res.stdout.strip()
+                prop_res = subprocess.run(
+                    ["xprop", "-id", win_id, "WM_CLASS"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    text=True,
+                    timeout=0.3,
+                )
+                if prop_res.returncode == 0:
+                    prop_lower = prop_res.stdout.lower()
+                    if any(term in prop_lower for term in self._TERMINAL_CLASSES):
+                        return True
+        except Exception:
+            pass
+        return False
+
     def inject_text(self, text: str, preserve_trailing_newline: bool = True) -> bool:
         if not self.can_inject_text():
             return False
         with self._state_lock:
-            self._suppress_until = time.time() + 0.5
+            self._suppress_until = time.time() + 1.0
         rendered = render_placeholders(text)
         if not preserve_trailing_newline:
             rendered = self._strip_single_trailing_newline(rendered)
@@ -202,23 +367,107 @@ class X11Backend(RuntimeBackend):
             typed_text = rendered
             move_left = 0
 
+        # Fast atomic clipboard injection: avoids slow character-by-character typing
+        # and prevents chat/web text fields from submitting on paragraph newlines.
+        if self._inject_via_clipboard(typed_text, move_left):
+            return True
+
+        # Fallback to simulated typing if clipboard tools are unavailable
+        return self._inject_via_typing(typed_text, move_left)
+
+    def _inject_via_clipboard(self, text: str, move_left: int = 0) -> bool:
+        if not (probe_binary("xclip") or probe_binary("xsel")):
+            return False
+
+        if not text:
+            return True
+
+        if not self._set_clipboard(text):
+            return False
+
+        # Brief pause to ensure X11 clipboard ownership is settled
+        time.sleep(0.02)
+
+        is_terminal = self._is_terminal_window()
+        paste_key = "ctrl+shift+v" if is_terminal else "ctrl+v"
+
+        pasted = False
         try:
-            # --clearmodifiers releases held keys so injected text isn't
-            # shifted/controlled; xdotool restores them after typing.
             subprocess.run(
-                ["xdotool", "type", "--clearmodifiers", "--delay", "1", typed_text],
+                ["xdotool", "key", "--clearmodifiers", paste_key],
                 check=True,
-                capture_output=True,
-                text=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=2.0,
             )
+            pasted = True
+        except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            try:
+                subprocess.run(
+                    ["xdotool", "key", "--clearmodifiers", "Shift+Insert"],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=2.0,
+                )
+                pasted = True
+            except Exception:
+                pasted = False
+
+        if not pasted:
+            return False
+
+        # Brief delay to allow target application to process paste event
+        time.sleep(0.04)
+
+        if move_left > 0:
+            try:
+                subprocess.run(
+                    ["xdotool", "key", "--clearmodifiers", "--repeat", str(move_left), "Left"],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=2.0,
+                )
+            except Exception:
+                pass
+
+        return True
+
+    def _inject_via_typing(self, text: str, move_left: int = 0) -> bool:
+        try:
+            # If text has multiple paragraphs/lines, never send Return keys.
+            # Split by line and type line by line with Shift+Return to avoid early submit.
+            lines = text.split("\n")
+            for i, line in enumerate(lines):
+                if line:
+                    subprocess.run(
+                        ["xdotool", "type", "--clearmodifiers", "--delay", "0", line],
+                        check=True,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        timeout=10.0,
+                    )
+                if i < len(lines) - 1:
+                    # Use Shift+Return instead of plain Return so it creates a line break
+                    # without submitting forms or sending chat messages
+                    subprocess.run(
+                        ["xdotool", "key", "--clearmodifiers", "Shift+Return"],
+                        check=True,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        timeout=2.0,
+                    )
+
             if move_left > 0:
                 subprocess.run(
                     ["xdotool", "key", "--clearmodifiers", "--repeat", str(move_left), "Left"],
                     check=True,
-                    capture_output=True,
-                    text=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=2.0,
                 )
-        except (FileNotFoundError, subprocess.CalledProcessError):
+        except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
             return False
         return True
 
@@ -281,7 +530,7 @@ class X11Backend(RuntimeBackend):
     def _handle_press(self, keycode: int) -> None:
         with self._state_lock:
             self._pressed_keycodes.add(keycode)
-            if self._paused or time.time() < self._suppress_until:
+            if self._paused or self._expanding or time.time() < self._suppress_until:
                 return
 
             if self._is_hotkey_match(keycode):
@@ -430,7 +679,7 @@ class X11Backend(RuntimeBackend):
             if not matches:
                 return
             _, snippet = max(matches, key=lambda item: item[0])
-            # Claim the expansion so queued keypresses during the xdotool
+            # Claim the expansion so queued keypresses during the injection
             # round-trip cannot trigger a second (duplicate) expansion.
             self._expanding = True
         try:
@@ -441,16 +690,21 @@ class X11Backend(RuntimeBackend):
 
     def _expand_keyword(self, snippet: Snippet) -> None:
         trigger_length = len(snippet.keyword)
+        with self._state_lock:
+            self._suppress_until = time.time() + 1.0
         try:
             subprocess.run(
                 ["xdotool", "key", "--clearmodifiers", *["BackSpace"] * trigger_length],
                 check=True,
-                capture_output=True,
-                text=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=2.0,
             )
-        except (FileNotFoundError, subprocess.CalledProcessError):
+        except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
             return
+        time.sleep(0.015)
         self.inject_text(snippet.expansion_text, preserve_trailing_newline=False)
         with self._state_lock:
             self._buffer = ""
+            self._suppress_until = time.time() + 0.1
         self.snippet_triggered.emit(snippet.label)

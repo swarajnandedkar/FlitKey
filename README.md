@@ -14,7 +14,7 @@ Built with **Python** and **PyQt6**, FlitKey operates completely locally and dyn
 | **GUI Framework** | PyQt6 |
 | **Compatible Platforms** | Linux (X11/Wayland) and Windows 10/11 (64-bit) |
 | **Supported Displays** | X11, Wayland, and native Windows keyboard hooks |
-| **Dependencies** | `python3-pyqt6`, `xdotool`, `xinput`, `x11-xserver-utils` (for Linux X11) |
+| **Dependencies** | `python3-pyqt6`, `xdotool`, `xinput`, `x11-xserver-utils`, `xclip` (for Linux X11) |
 | **Configuration Path** | `~/.config/flitkey/config.json` (Linux) / `%APPDATA%\flitkey\config.json` (Windows) |
 | **License** | [MIT License](LICENSE) |
 | **Current Version** | `0.5.0` |
@@ -65,7 +65,7 @@ FlitKey requires Python 3.10 or newer and specific X11 utility tools for expansi
 
 ```bash
 sudo apt update
-sudo apt install python3 python3-pyqt6 xdotool xinput x11-xserver-utils
+sudo apt install python3 python3-pyqt6 xdotool xinput x11-xserver-utils xclip
 ```
 
 For building the Debian package locally, you also need:

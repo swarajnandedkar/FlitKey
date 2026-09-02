@@ -33,11 +33,10 @@ const FlitKeyPlaceholders = {
   },
 
   /**
-   * Renders placeholders in expansionText.
+   * Renders placeholders synchronously (for tokens that don't need async API).
    * Returns object { renderedText, cursorIndex }
-   * cursorIndex is relative to the start of renderedText, or -1 if {{cursor}} is not present.
    */
-  async render(expansionText) {
+  renderSync(expansionText) {
     if (!expansionText) return { renderedText: '', cursorIndex: -1 };
 
     let text = expansionText;
@@ -47,16 +46,30 @@ const FlitKeyPlaceholders = {
     text = text.replaceAll('{{time}}', this.formatTime(now));
     text = text.replaceAll('{{datetime}}', this.formatDateTime(now));
 
-    if (text.includes('{{clipboard}}')) {
-      const clip = await this.getClipboardText();
-      text = text.replaceAll('{{clipboard}}', clip);
-    }
-
     let cursorIndex = -1;
     if (text.includes('{{cursor}}')) {
       cursorIndex = text.indexOf('{{cursor}}');
       text = text.replaceAll('{{cursor}}', '');
     }
+
+    return { renderedText: text, cursorIndex };
+  },
+
+  /**
+   * Renders placeholders in expansionText.
+   * Returns object { renderedText, cursorIndex }
+   * cursorIndex is relative to the start of renderedText, or -1 if {{cursor}} is not present.
+   */
+  async render(expansionText) {
+    if (!expansionText) return { renderedText: '', cursorIndex: -1 };
+
+    if (!expansionText.includes('{{clipboard}}')) {
+      return this.renderSync(expansionText);
+    }
+
+    let { renderedText: text, cursorIndex } = this.renderSync(expansionText);
+    const clip = await this.getClipboardText();
+    text = text.replaceAll('{{clipboard}}', clip);
 
     return { renderedText: text, cursorIndex };
   }
