@@ -9,7 +9,11 @@ from ..models import CapabilityReport, Snippet
 
 class RuntimeBackend(QObject):
     status_changed = pyqtSignal(str)
-    snippet_triggered = pyqtSignal(str)
+    snippet_triggered = pyqtSignal(str)  # snippet id
+    # (snippet id, preserve_trailing_newline). Emitted instead of injecting when a
+    # snippet has {{field}}/{{choice}} placeholders: the controller prompts on the
+    # main thread and then calls inject_text(values=...) itself.
+    fill_requested = pyqtSignal(str, bool)
 
     def __init__(self, capability_report: CapabilityReport):
         super().__init__()
@@ -40,5 +44,7 @@ class RuntimeBackend(QObject):
     def can_inject_text(self) -> bool:
         return False
 
-    def inject_text(self, text: str, preserve_trailing_newline: bool = True) -> bool:
+    def inject_text(
+        self, text: str, preserve_trailing_newline: bool = True, values: dict[str, str] | None = None
+    ) -> bool:
         return False

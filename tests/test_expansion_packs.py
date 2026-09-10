@@ -62,6 +62,13 @@ class TestExpansionPacks(unittest.TestCase):
         self.assertEqual(len(merged), len(existing) + len(new_snippets) - 1)
         self.assertEqual(merged[0].expansion_text, "custom commit")
 
+    def test_pack_snippets_carry_provenance_and_round_trip(self):
+        snippets = load_pack_snippets(get_builtin_packs_dir() / "developer.json", target_platform="all")
+        self.assertTrue(all(s.pack_id == "developer" for s in snippets))
+        restored = Snippet.from_dict(snippets[0].to_dict())
+        self.assertEqual(restored.pack_id, "developer")
+        self.assertEqual(Snippet.from_dict({"label": "mine", "expansion_text": "x"}).pack_id, "")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -15,6 +15,7 @@ _HOTKEY_MODIFIER_ALIASES = {
     "win": "Win",
     "windows": "Win",
     "super": "Win",
+    "meta": "Win",
 }
 _HOTKEY_KEY_ALIASES = {
     "return": "Enter",
@@ -23,8 +24,11 @@ _HOTKEY_KEY_ALIASES = {
     "escape": "Escape",
     "space": "Space",
     "backspace": "Backspace",
+    "del": "Delete",
     "delete": "Delete",
+    "pgup": "PageUp",
     "pageup": "PageUp",
+    "pgdown": "PageDown",
     "pagedown": "PageDown",
 }
 
@@ -66,7 +70,12 @@ class Snippet:
     keyword: str = ""
     hotkey: str = ""
     enabled: bool = True
+    pack_id: str = ""
+    use_count: int = 0
     id: str = field(default_factory=lambda: str(uuid4()))
+
+    def keystrokes_saved_per_use(self) -> int:
+        return max(len(self.expansion_text) - len(self.trigger_value()), 0)
 
     def trigger_value(self) -> str:
         return self.keyword if self.trigger_type == "keyword" else self.hotkey
@@ -80,6 +89,8 @@ class Snippet:
             "hotkey": self.hotkey,
             "expansion_text": self.expansion_text,
             "enabled": self.enabled,
+            "pack_id": self.pack_id,
+            "use_count": self.use_count,
         }
 
     @classmethod
@@ -92,7 +103,16 @@ class Snippet:
             hotkey=data.get("hotkey", ""),
             expansion_text=data.get("expansion_text", ""),
             enabled=bool(data.get("enabled", True)),
+            pack_id=str(data.get("pack_id") or ""),
+            use_count=max(int(data.get("use_count") or 0), 0),
         )
+
+
+def usage_stats(snippets: list[Snippet]) -> tuple[int, int]:
+    """Return (total uses, total keystrokes saved) across all snippets."""
+    uses = sum(s.use_count for s in snippets)
+    saved = sum(s.use_count * s.keystrokes_saved_per_use() for s in snippets)
+    return uses, saved
 
 
 @dataclass

@@ -5,6 +5,7 @@ from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
+    QComboBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -22,7 +23,7 @@ from PyQt6.QtWidgets import (
 )
 
 from ..branding import APP_NAME, APP_TAGLINE
-from ..models import CapabilityReport, Settings, Snippet
+from ..models import CapabilityReport, Settings, Snippet, usage_stats
 
 
 def _card() -> QFrame:
@@ -48,6 +49,7 @@ class MainWindow(QMainWindow):
     autostart_toggled = pyqtSignal(bool)
     notify_toggled = pyqtSignal(bool)
     picker_requested = pyqtSignal()
+    remove_pack_requested = pyqtSignal(str)
 
     def __init__(self) -> None:
         super().__init__()
@@ -87,6 +89,18 @@ class MainWindow(QMainWindow):
         self.search_input.setClearButtonEnabled(True)
         self.search_input.textChanged.connect(self._filter_snippets)
 
+        # userData: None = every snippet, "" = user-created only, "<pack_id>" = that pack.
+        self.pack_filter = QComboBox()
+        self.pack_filter.setToolTip("Filter by expansion pack")
+        self.pack_filter.currentIndexChanged.connect(self._filter_snippets)
+
+        self.remove_pack_button = QPushButton("Remove Pack")
+        self.remove_pack_button.setObjectName("dangerButton")
+        self.remove_pack_button.hide()
+        self.remove_pack_button.clicked.connect(
+            lambda: self.remove_pack_requested.emit(self.pack_filter.currentData())
+        )
+
         add_button = QPushButton("New Snippet")
         add_button.setObjectName("primaryButton")
         add_button.clicked.connect(self.add_requested.emit)
@@ -103,6 +117,8 @@ class MainWindow(QMainWindow):
         toolbar = QHBoxLayout()
         toolbar.setSpacing(8)
         toolbar.addWidget(self.search_input, 1)
+        toolbar.addWidget(self.pack_filter)
+        toolbar.addWidget(self.remove_pack_button)
         toolbar.addWidget(import_button)
         toolbar.addWidget(packs_button)
         toolbar.addWidget(picker_button)
@@ -110,8 +126,8 @@ class MainWindow(QMainWindow):
         return toolbar
 
     def _build_snippets_card(self) -> QFrame:
-        self.snippet_table = QTableWidget(0, 5)
-        self.snippet_table.setHorizontalHeaderLabels(["Label", "Type", "Trigger", "Enabled", "Preview"])
+        self.snippet_table = QTableWidget(0, 6)
+        self.snippet_table.setHorizontalHeaderLabels(["Label", "Type", "Trigger", "Pack", "Enabled", "Preview"])
         self.snippet_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.snippet_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.snippet_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -144,6 +160,7 @@ class MainWindow(QMainWindow):
 
         self.count_label = QLabel()
         self.count_label.setObjectName("mutedText")
+        self._stats_suffix = ""
 
         row_actions = QHBoxLayout()
         row_actions.setSpacing(8)
@@ -275,38 +292,54 @@ class MainWindow(QMainWindow):
             self.snippet_table.setItem(row, 0, label_item)
             self.snippet_table.setItem(row, 1, QTableWidgetItem(snippet.trigger_type.title()))
             self.snippet_table.setItem(row, 2, QTableWidgetItem(snippet.trigger_value()))
-            self.snippet_table.setItem(row, 3, QTableWidgetItem("On" if snippet.enabled else "Off"))
+            self.snippet_table.setItem(row, 3, QTableWidgetItem(snippet.pack_id))
+            self.snippet_table.setItem(row, 4, QTableWidgetItem("On" if snippet.enabled else "Off"))
             preview = snippet.expansion_text.replace("\n", " ")[:80]
-            self.snippet_table.setItem(row, 4, QTableWidgetItem(preview))
+            self.snippet_table.setItem(row, 5, QTableWidgetItem(preview))
         self.snippet_table.resizeColumnsToContents()
         self.snippet_table.setVisible(bool(snippets))
         self.empty_label.setVisible(not snippets)
+        self._rebuild_pack_filter(sorted({s.pack_id for s in snippets if s.pack_id}))
+        uses, saved = usage_stats(snippets)
+        self._stats_suffix = f" · {uses:,} uses · ~{saved:,} keystrokes saved" if uses else ""
         self._filter_snippets()
+
+    def _rebuild_pack_filter(self, pack_ids: list[str]) -> None:
+        selected = self.pack_filter.currentData()
+        self.pack_filter.blockSignals(True)
+        self.pack_filter.clear()
+        self.pack_filter.addItem("All snippets", None)
+        if pack_ids:
+            self.pack_filter.addItem("My snippets", "")
+            for pack_id in pack_ids:
+                self.pack_filter.addItem(f"Pack: {pack_id}", pack_id)
+        index = self.pack_filter.findData(selected)
+        self.pack_filter.setCurrentIndex(max(index, 0))
+        self.pack_filter.setVisible(bool(pack_ids))
+        self.pack_filter.blockSignals(False)
 
     def _filter_snippets(self) -> None:
         query = self.search_input.text().strip().lower()
+        pack = self.pack_filter.currentData()
+        self.remove_pack_button.setVisible(bool(pack))
         visible = 0
         for row in range(self.snippet_table.rowCount()):
-            if not query:
-                self.snippet_table.setRowHidden(row, False)
-                visible += 1
-                continue
-
-            # Read text from table items to filter
-            label = self.snippet_table.item(row, 0).text().lower() if self.snippet_table.item(row, 0) else ""
-            trigger_type = self.snippet_table.item(row, 1).text().lower() if self.snippet_table.item(row, 1) else ""
-            trigger_val = self.snippet_table.item(row, 2).text().lower() if self.snippet_table.item(row, 2) else ""
-            preview = self.snippet_table.item(row, 4).text().lower() if self.snippet_table.item(row, 4) else ""
-
-            match = (query in label) or (query in trigger_type) or (query in trigger_val) or (query in preview)
+            cells = [
+                self.snippet_table.item(row, col).text() if self.snippet_table.item(row, col) else ""
+                for col in range(self.snippet_table.columnCount())
+            ]
+            label, trigger_type, trigger_val, row_pack, _enabled, preview = cells
+            match = pack is None or row_pack == pack
+            if query:
+                match = match and any(query in text.lower() for text in (label, trigger_type, trigger_val, preview))
             self.snippet_table.setRowHidden(row, not match)
             visible += int(match)
 
         total = self.snippet_table.rowCount()
-        if query and visible != total:
+        if visible != total:
             self.count_label.setText(f"{visible} of {total} snippets")
         else:
-            self.count_label.setText(f"{total} snippet{'' if total == 1 else 's'}")
+            self.count_label.setText(f"{total} snippet{'' if total == 1 else 's'}{self._stats_suffix}")
         self._sync_row_actions()
 
     def update_settings(self, settings: Settings) -> None:

@@ -14,6 +14,37 @@ from .security import atomic_write_json, ensure_private_directory
 
 APP_DIR_NAME = APP_ID
 CONFIG_FILE_NAME = "config.json"
+SCHEMA_VERSION = 1
+
+
+def _migrate(payload: dict) -> dict:
+    """Upgrade an older config payload in place to SCHEMA_VERSION."""
+    version = payload.get("schema_version")
+    if not isinstance(version, int) or version < 1:
+        version = 0  # pre-versioned configs
+    # Add `if version < N:` blocks here as the schema evolves; each bumps `version`.
+    payload["schema_version"] = SCHEMA_VERSION
+    return payload
+
+
+def _payload(snippets: list[Snippet], settings: Settings) -> dict:
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "snippets": [snippet.to_dict() for snippet in snippets],
+        "settings": settings.to_dict(),
+    }
+
+
+def _parse_payload(payload: dict) -> tuple[list[Snippet], Settings]:
+    payload = _migrate(payload)
+    raw_snippets = payload.get("snippets", [])
+    if not isinstance(raw_snippets, list):
+        raw_snippets = []
+    snippets = [Snippet.from_dict(item) for item in raw_snippets if isinstance(item, dict)]
+    settings_payload = payload.get("settings", {})
+    if not isinstance(settings_payload, dict):
+        settings_payload = {}
+    return snippets, Settings.from_dict(settings_payload)
 
 
 def _xdg_config_home() -> Path:
@@ -71,30 +102,17 @@ def load_state() -> tuple[list[Snippet], Settings]:
 
     if not isinstance(payload, dict):
         return [], Settings()
-
-    raw_snippets = payload.get("snippets", [])
-    if not isinstance(raw_snippets, list):
-        raw_snippets = []
-    snippets = [Snippet.from_dict(item) for item in raw_snippets if isinstance(item, dict)]
-    settings_payload = payload.get("settings", {})
-    if not isinstance(settings_payload, dict):
-        settings_payload = {}
-    settings = Settings.from_dict(settings_payload)
-    return snippets, settings
+    return _parse_payload(payload)
 
 
 def save_state(snippets: list[Snippet], settings: Settings) -> None:
-    payload = {
-        "snippets": [snippet.to_dict() for snippet in snippets],
-        "settings": settings.to_dict(),
-    }
-    atomic_write_json(config_path(), payload)
+    atomic_write_json(config_path(), _payload(snippets, settings))
+
 
 def export_state(destination: Path) -> None:
     """Export the local user data for access/portability requests."""
     snippets, settings = load_state()
-    payload = {"snippets": [snippet.to_dict() for snippet in snippets], "settings": settings.to_dict()}
-    atomic_write_json(destination, payload)
+    atomic_write_json(destination, _payload(snippets, settings))
 
 
 def import_state(source: Path) -> None:
@@ -109,18 +127,10 @@ def import_state(source: Path) -> None:
     # Validate structure
     if not isinstance(payload, dict):
         raise ValueError("Import payload must be a JSON object.")
-    raw_snippets = payload.get("snippets", [])
-    if not isinstance(raw_snippets, list):
-        raw_snippets = []
-    snippets = [Snippet.from_dict(item) for item in raw_snippets if isinstance(item, dict)]
-    settings_payload = payload.get("settings", {})
-    if not isinstance(settings_payload, dict):
-        settings_payload = {}
-    settings = Settings.from_dict(settings_payload)
+    snippets, settings = _parse_payload(payload)
     # Back up current data so an accidental import can be undone.
     _backup_before_replace()
-    # Write to config, overwriting existing data
-    atomic_write_json(config_path(), {"snippets": [s.to_dict() for s in snippets], "settings": settings.to_dict()})
+    atomic_write_json(config_path(), _payload(snippets, settings))
 
 
 def _backup_before_replace() -> None:

@@ -175,6 +175,12 @@ FlitKey renders dynamic placeholders at the time of expansion. Use the following
 | `{{datetime}}` | Current date and time | `2026-07-12 14:30` |
 | `{{clipboard}}` | Injects current clipboard text | *Contents of system clipboard* |
 | `{{cursor}}` | Positions the text cursor here after pasting | *Removes tag and moves cursor left* |
+| `{{date:+7d}}` / `{{date:-2w}}` | Date offset (`d` days, `w` weeks, `h` hours, `m` minutes) | `2026-07-19` |
+| `{{date:%d %B %Y}}` | Custom [strftime](https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes) format; combine with an offset: `{{date:+1d %A}}` | `12 July 2026` |
+| `{{field:Name}}` | Prompts for a value before inserting; `{{field:Name=default}}` pre-fills it | *Whatever you type* |
+| `{{choice:Name=A\|B\|C}}` | Prompts with a dropdown | *The option you pick* |
+
+Snippets containing `{{field}}` or `{{choice}}` open a small form when triggered; the same name used twice is asked once. Cancelling the form inserts nothing.
 
 *Note: On Wayland, the `{{cursor}}` tag is stripped from the text before copying to the clipboard, and `{{clipboard}}` inserts the text currently held in your clipboard buffer.*
 

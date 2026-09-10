@@ -8,7 +8,7 @@ import threading
 import time
 
 from ..models import CapabilityReport, Snippet, normalize_hotkey
-from ..placeholders import render_placeholders
+from ..placeholders import collect_fields, render_placeholders
 from ..platform import probe_binary
 from .base import RuntimeBackend
 
@@ -348,12 +348,14 @@ class X11Backend(RuntimeBackend):
             pass
         return False
 
-    def inject_text(self, text: str, preserve_trailing_newline: bool = True) -> bool:
+    def inject_text(
+        self, text: str, preserve_trailing_newline: bool = True, values: dict[str, str] | None = None
+    ) -> bool:
         if not self.can_inject_text():
             return False
         with self._state_lock:
             self._suppress_until = time.time() + 1.0
-        rendered = render_placeholders(text)
+        rendered = render_placeholders(text, values)
         if not preserve_trailing_newline:
             rendered = self._strip_single_trailing_newline(rendered)
 
@@ -581,8 +583,10 @@ class X11Backend(RuntimeBackend):
                 continue
             if self._normalize_hotkey(snippet.hotkey) != self._normalize_hotkey(pressed):
                 continue
-            if self.inject_text(snippet.expansion_text):
-                self.snippet_triggered.emit(snippet.label)
+            if collect_fields(snippet.expansion_text):
+                self.fill_requested.emit(snippet.id, True)
+            elif self.inject_text(snippet.expansion_text):
+                self.snippet_triggered.emit(snippet.id)
             return True
         return False
 
@@ -703,8 +707,13 @@ class X11Backend(RuntimeBackend):
         except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
             return
         time.sleep(0.015)
+        if collect_fields(snippet.expansion_text):
+            with self._state_lock:
+                self._buffer = ""
+            self.fill_requested.emit(snippet.id, False)
+            return
         self.inject_text(snippet.expansion_text, preserve_trailing_newline=False)
         with self._state_lock:
             self._buffer = ""
             self._suppress_until = time.time() + 0.1
-        self.snippet_triggered.emit(snippet.label)
+        self.snippet_triggered.emit(snippet.id)

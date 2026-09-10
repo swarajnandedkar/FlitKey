@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QKeySequence
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QFrame,
+    QKeySequenceEdit,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -17,7 +18,32 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..models import Snippet
+from ..models import Snippet, normalize_hotkey
+
+
+class HotkeyEdit(QKeySequenceEdit):
+    """Captures a single key combo and exposes it in FlitKey's normalized form."""
+
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        # Both setters are Qt 6.4+; distro PyQt6 packages may predate them.
+        if hasattr(self, "setMaximumSequenceLength"):
+            self.setMaximumSequenceLength(1)
+        if hasattr(self, "setClearButtonEnabled"):
+            self.setClearButtonEnabled(True)
+        self.keySequenceChanged.connect(self._truncate)
+
+    def _truncate(self, sequence: QKeySequence) -> None:
+        if sequence.count() > 1:
+            first = sequence.toString(QKeySequence.SequenceFormat.PortableText).split(", ")[0]
+            self.setKeySequence(QKeySequence(first))
+
+    def hotkey(self) -> str:
+        return normalize_hotkey(self.keySequence().toString(QKeySequence.SequenceFormat.PortableText))
+
+    def set_hotkey(self, value: str) -> None:
+        # Qt spells the Super/Windows key "Meta".
+        self.setKeySequence(QKeySequence(normalize_hotkey(value).replace("Win+", "Meta+")))
 
 
 class SnippetDialog(QDialog):
@@ -35,8 +61,8 @@ class SnippetDialog(QDialog):
         self.trigger_type_combo.addItems(["keyword", "hotkey"])
         self.keyword_edit = QLineEdit()
         self.keyword_edit.setPlaceholderText("e.g. /follow")
-        self.hotkey_edit = QLineEdit()
-        self.hotkey_edit.setPlaceholderText("e.g. Ctrl+Alt+F")
+        self.hotkey_edit = HotkeyEdit()
+        self.hotkey_edit.setToolTip("Click here, then press the key combination")
         self.expansion_edit = QPlainTextEdit()
         self.expansion_edit.setPlaceholderText("The text that gets inserted…")
         self.enabled_checkbox = QCheckBox("Enabled")
@@ -54,8 +80,13 @@ class SnippetDialog(QDialog):
         form.addRow("Expansion", self.expansion_edit)
         form.addRow("", self.enabled_checkbox)
 
-        hint = QLabel("Placeholders: {{date}} · {{time}} · {{datetime}}")
+        hint = QLabel(
+            "Placeholders: {{date}} · {{date:+7d}} · {{date:%d %b %Y}} · {{time}} · {{datetime}} · "
+            "{{clipboard}} · {{cursor}}\n"
+            "Fill-in fields: {{field:Name}} · {{field:Name=default}} · {{choice:Name=A|B|C}}"
+        )
         hint.setObjectName("mutedText")
+        hint.setWordWrap(True)
 
         form_card = QFrame()
         form_card.setObjectName("card")
@@ -89,7 +120,7 @@ class SnippetDialog(QDialog):
             self.label_edit.setText(snippet.label)
             self.trigger_type_combo.setCurrentText(snippet.trigger_type)
             self.keyword_edit.setText(snippet.keyword)
-            self.hotkey_edit.setText(snippet.hotkey)
+            self.hotkey_edit.set_hotkey(snippet.hotkey)
             self.expansion_edit.setPlainText(snippet.expansion_text)
             self.enabled_checkbox.setChecked(snippet.enabled)
         self._refresh_fields()
@@ -121,7 +152,7 @@ class SnippetDialog(QDialog):
             label=self.label_edit.text().strip(),
             trigger_type=self.trigger_type_combo.currentText(),
             keyword=self.keyword_edit.text().strip(),
-            hotkey=self.hotkey_edit.text().strip(),
+            hotkey=self.hotkey_edit.hotkey(),
             expansion_text=self.expansion_edit.toPlainText(),
             enabled=self.enabled_checkbox.isChecked(),
         )

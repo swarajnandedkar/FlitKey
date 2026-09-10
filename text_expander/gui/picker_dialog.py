@@ -21,7 +21,10 @@ class SnippetPickerDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(PICKER_TITLE)
         self.resize(460, 380)
-        self._snippets = [snippet for snippet in snippets if snippet.enabled]
+        self._snippets = sorted(
+            (snippet for snippet in snippets if snippet.enabled),
+            key=lambda snippet: -snippet.use_count,
+        )
         self.selected_snippet: Snippet | None = None
 
         self.search = QLineEdit()

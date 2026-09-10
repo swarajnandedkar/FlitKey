@@ -75,6 +75,7 @@ def load_pack_snippets(file_path: Path, target_platform: str | None = None) -> l
     raw_snippets = data.get("snippets", [])
     if not isinstance(raw_snippets, list):
         return snippets
+    pack_id = str(data.get("pack_id") or "")
 
     # Resolve platform query string
     current_os = target_platform or sys.platform
@@ -108,6 +109,7 @@ def load_pack_snippets(file_path: Path, target_platform: str | None = None) -> l
                     hotkey=hk,
                     expansion_text=exp,
                     enabled=enabled,
+                    pack_id=pack_id,
                 )
             )
 

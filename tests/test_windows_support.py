@@ -18,6 +18,10 @@ class WindowsSupportTests(unittest.TestCase):
             WindowsBackend.normalize_hotkey("Win+Esc"),
             "Win+Escape",
         )
+        # Qt's portable key-sequence spellings (what the hotkey capture widget emits).
+        self.assertEqual(WindowsBackend.normalize_hotkey("Meta+A"), "Win+A")
+        self.assertEqual(WindowsBackend.normalize_hotkey("Ctrl+PgUp"), "Ctrl+PageUp")
+        self.assertEqual(WindowsBackend.normalize_hotkey("Alt+Del"), "Alt+Delete")
 
     def test_windows_session_detection(self) -> None:
         with patch.object(platform.sys, "platform", "win32"):

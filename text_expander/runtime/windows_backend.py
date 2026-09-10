@@ -6,7 +6,7 @@ import threading
 from ctypes import wintypes
 
 from ..models import CapabilityReport, Snippet, normalize_hotkey
-from ..placeholders import render_placeholders
+from ..placeholders import collect_fields, render_placeholders
 from .base import RuntimeBackend
 
 
@@ -324,11 +324,13 @@ class WindowsBackend(RuntimeBackend):
     def can_inject_text(self) -> bool:
         return self._api_ready
 
-    def inject_text(self, text: str, preserve_trailing_newline: bool = True) -> bool:
+    def inject_text(
+        self, text: str, preserve_trailing_newline: bool = True, values: dict[str, str] | None = None
+    ) -> bool:
         if not self.can_inject_text():
             return False
 
-        rendered = render_placeholders(text)
+        rendered = render_placeholders(text, values)
         if not preserve_trailing_newline:
             rendered = self._strip_single_trailing_newline(rendered)
 
@@ -493,7 +495,7 @@ class WindowsBackend(RuntimeBackend):
         if self._expand_keyword(snippet, typed_text):
             with self._state_lock:
                 self._buffer = ""
-            self.snippet_triggered.emit(snippet.label)
+            self.snippet_triggered.emit(snippet.id)
             return True
         return False
 
@@ -516,6 +518,10 @@ class WindowsBackend(RuntimeBackend):
             visible_prefix = self._buffer[-len(snippet.keyword) : -len(final_text)]
         if prior_count and not self._send_virtual_key(self.VK_BACK, prior_count):
             return False
+        if collect_fields(snippet.expansion_text):
+            # Never block inside the low-level hook; the controller prompts and injects.
+            self.fill_requested.emit(snippet.id, False)
+            return True
         if self.inject_text(snippet.expansion_text, preserve_trailing_newline=False):
             return True
 
@@ -548,9 +554,12 @@ class WindowsBackend(RuntimeBackend):
                 continue
             if self.normalize_hotkey(snippet.hotkey) != self.normalize_hotkey(pressed):
                 continue
+            if collect_fields(snippet.expansion_text):
+                self.fill_requested.emit(snippet.id, True)
+                return True
             if not self.inject_text(snippet.expansion_text):
                 return False
-            self.snippet_triggered.emit(snippet.label)
+            self.snippet_triggered.emit(snippet.id)
             return True
         return False
 

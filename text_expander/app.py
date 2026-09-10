@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QMenu, QMessageBox, QSyst
 
 from .branding import APP_NAME, ICON_FILE
 from .config import delete_state, export_state, import_state, load_state, save_state
+from .gui.fill_dialog import FillDialog
 from .gui.main_window import MainWindow
 from .gui.packs_dialog import PacksDialog
 from .gui.picker_dialog import SnippetPickerDialog
@@ -16,7 +17,7 @@ from .importers import import_snippets_from_file
 from .models import Snippet, normalize_hotkey
 from .packs import load_pack_snippets, merge_pack_snippets
 from .platform import install_launcher, set_autostart
-from .placeholders import render_placeholders
+from .placeholders import collect_fields, render_placeholders
 from .runtime.factory import create_backend
 
 
@@ -48,13 +49,14 @@ class AppController(QObject):
         self.window.autostart_toggled.connect(self.set_autostart_enabled)
         self.window.notify_toggled.connect(self.set_notify_on_expansion)
         self.window.picker_requested.connect(self.open_picker)
-
+        self.window.remove_pack_requested.connect(self.remove_pack)
 
         self.window.start_minimized_checkbox.toggled.connect(self._settings_checkbox_changed)
         self.window.case_sensitive_checkbox.toggled.connect(self._settings_checkbox_changed)
         self.window.notify_checkbox.toggled.connect(self._settings_checkbox_changed)
         self.backend.status_changed.connect(self._update_status)
         self.backend.snippet_triggered.connect(self._notify_snippet_triggered)
+        self.backend.fill_requested.connect(self._fill_and_inject)
 
         install_launcher()
         if self.settings.autostart:
@@ -215,6 +217,18 @@ class AppController(QObject):
             )
 
 
+    def remove_pack(self, pack_id: str) -> None:
+        count = sum(1 for s in self.snippets if s.pack_id == pack_id)
+        confirm = QMessageBox.question(
+            self.window,
+            "Remove Pack",
+            f"Remove all {count} snippet(s) from pack '{pack_id}'?\nSnippets you edited will be removed too.",
+        )
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+        self.snippets = [s for s in self.snippets if s.pack_id != pack_id]
+        self._persist_and_reload()
+
     def set_paused(self, paused: bool) -> None:
         self.settings.paused = paused
         self.backend.set_paused(paused)
@@ -301,16 +315,39 @@ class AppController(QObject):
         dialog = SnippetPickerDialog(self.snippets, self.window)
         if not dialog.exec() or not dialog.selected_snippet:
             return
-        snippet = dialog.selected_snippet
+        self._inject_or_copy(dialog.selected_snippet)
+
+    def _prompt_fields(self, snippet: Snippet) -> dict[str, str] | None:
+        """Return field values for the snippet, or None if it needs none / the user cancelled."""
+        fields = collect_fields(snippet.expansion_text)
+        if not fields:
+            return {}
+        dialog = FillDialog(snippet.label, fields, self.window)
+        return dialog.values() if dialog.exec() else None
+
+    def _fill_and_inject(self, snippet_id: str, preserve_trailing_newline: bool) -> None:
+        snippet = self._find_snippet(snippet_id)
+        if not snippet:
+            return
+        values = self._prompt_fields(snippet)
+        if values is None:
+            return
+        if self.backend.inject_text(snippet.expansion_text, preserve_trailing_newline, values):
+            self._notify_snippet_triggered(snippet.id)
+
+    def _inject_or_copy(self, snippet: Snippet) -> None:
+        values = self._prompt_fields(snippet)
+        if values is None:
+            return
         if self.backend.can_inject_text():
-            ok = self.backend.inject_text(snippet.expansion_text)
-            if ok:
-                self._notify_snippet_triggered(snippet.label)
+            if self.backend.inject_text(snippet.expansion_text, values=values):
+                self._notify_snippet_triggered(snippet.id)
                 return
 
-        rendered_text = render_placeholders(snippet.expansion_text).replace("{{cursor}}", "")
+        rendered_text = render_placeholders(snippet.expansion_text, values).replace("{{cursor}}", "")
         clipboard = QGuiApplication.clipboard()
         clipboard.setText(rendered_text)
+        self._record_use(snippet)
         if self.settings.notify_on_expansion:
             self.tray.showMessage(f"{APP_NAME} copied text", f"{snippet.label} copied to clipboard.")
 
@@ -351,10 +388,19 @@ class AppController(QObject):
         else:
             self.tray.setToolTip(APP_NAME)
 
-    def _notify_snippet_triggered(self, label: str) -> None:
-        if not self.settings.notify_on_expansion:
+    def _record_use(self, snippet: Snippet) -> None:
+        snippet.use_count += 1
+        self._persist()
+        # Counts don't affect trigger matching, so refresh the table without a backend reload.
+        self.window.update_snippets(self.snippets)
+
+    def _notify_snippet_triggered(self, snippet_id: str) -> None:
+        snippet = self._find_snippet(snippet_id)
+        if not snippet:
             return
-        self.tray.showMessage(f"{APP_NAME} expanded a snippet", label)
+        self._record_use(snippet)
+        if self.settings.notify_on_expansion:
+            self.tray.showMessage(f"{APP_NAME} expanded a snippet", snippet.label)
 
     def _sync_pause_action(self) -> None:
         self.pause_action.setText("Resume" if self.settings.paused else "Pause")

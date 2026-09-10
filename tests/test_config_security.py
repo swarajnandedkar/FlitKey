@@ -91,6 +91,22 @@ class ConfigSecurityTests(unittest.TestCase):
                 migrated = Path(tmpdir) / "flitkey" / "config.json"
                 self.assertTrue(migrated.exists())
 
+    @XDG_ONLY
+    def test_schema_version_written_and_unversioned_config_still_loads(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.dict(os.environ, {"XDG_CONFIG_HOME": tmpdir}, clear=False):
+                target = Path(tmpdir) / "flitkey" / "config.json"
+                target.parent.mkdir(parents=True, exist_ok=True)
+                legacy = {"snippets": [{"label": "old", "keyword": "/o", "expansion_text": "x"}], "settings": {}}
+                target.write_text(json.dumps(legacy), encoding="utf-8")
+
+                snippets, settings = config.load_state()
+                self.assertEqual(snippets[0].label, "old")
+
+                config.save_state(snippets, settings)
+                saved = json.loads(target.read_text(encoding="utf-8"))
+                self.assertEqual(saved["schema_version"], config.SCHEMA_VERSION)
+
 
 if __name__ == "__main__":
     unittest.main()
