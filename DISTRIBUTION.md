@@ -26,16 +26,16 @@ This document summarizes the release artifacts and step-by-step submission check
 
 ### A. Debian / Ubuntu `.deb` Package
 - **Build Command**: `python3 build_deb.py`
-- **Output Artifact**: `dist/flitkey_0.5.0_all.deb`
-- **Install Command**: `sudo dpkg -i dist/flitkey_0.5.0_all.deb`
+- **Output Artifact**: `dist/flitkey_0.6.1_all.deb`
+- **Install Command**: `sudo dpkg -i dist/flitkey_0.6.1_all.deb`
 
 ### B. Arch Linux User Repository (AUR)
-- **Manifest File**: [`installer/PKGBUILD`](file:///home/swaraj/Desktop/Projects/Linux%20aText%20Tool/installer/PKGBUILD)
+- **Manifest File**: [`installer/PKGBUILD`](installer/PKGBUILD)
 - **Submission Steps**:
   1. Clone your AUR package repo: `git clone ssh://aur@aur.archlinux.org/flitkey-bin.git`
   2. Copy `installer/PKGBUILD` into the repository.
   3. Generate `.SRCINFO`: `makepkg --printsrcinfo > .SRCINFO`
-  4. Commit and push: `git add PKGBUILD .SRCINFO && git commit -m "Release v0.5.0" && git push`
+  4. Commit and push: `git add PKGBUILD .SRCINFO && git commit -m "Release v0.6.1" && git push`
 
 ### C. Flathub (Flatpak)
 - **Manifest File**: [`installer/xyz.flitkey.FlitKey.json`](file:///home/swaraj/Desktop/Projects/Linux%20aText%20Tool/installer/xyz.flitkey.FlitKey.json)

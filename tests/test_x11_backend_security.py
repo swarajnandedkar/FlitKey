@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -8,7 +9,10 @@ from unittest.mock import patch
 from text_expander.models import Snippet
 from text_expander.runtime.x11_backend import X11Backend
 
+LINUX_ONLY = unittest.skipIf(sys.platform == "win32", "X11 backend is Linux-only")
 
+
+@LINUX_ONLY
 class X11BackendSecurityTests(unittest.TestCase):
     def setUp(self) -> None:
         keymap = {
@@ -18,10 +22,9 @@ class X11BackendSecurityTests(unittest.TestCase):
             37: ("Control_L", "Control_L"),
             64: ("Alt_L", "Alt_L"),
         }
-        with patch.object(X11Backend, "_load_keymap", return_value=keymap), patch(
-            "text_expander.runtime.x11_backend.probe_binary", return_value=True
-        ):
-            self.backend = X11Backend()
+        self.enterContext(patch.object(X11Backend, "_load_keymap", return_value=keymap))
+        self.enterContext(patch("text_expander.runtime.x11_backend.probe_binary", return_value=True))
+        self.backend = X11Backend()
 
     def test_inject_text_clipboard_passes_untrusted_text_safely(self) -> None:
         inputs_received = []

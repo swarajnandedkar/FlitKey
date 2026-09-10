@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Export JSON
   btnExport.addEventListener('click', () => {
     const payload = {
-      version: '0.4.0',
+      version: '0.6.1',
       exported_at: new Date().toISOString(),
       snippets,
       settings

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -7,7 +8,10 @@ from unittest.mock import patch
 from text_expander.models import Snippet
 from text_expander.runtime.x11_backend import X11Backend
 
+LINUX_ONLY = unittest.skipIf(sys.platform == "win32", "X11 backend is Linux-only")
 
+
+@LINUX_ONLY
 class LinuxExpansionTests(unittest.TestCase):
     def setUp(self) -> None:
         keymap = {
@@ -16,10 +20,9 @@ class LinuxExpansionTests(unittest.TestCase):
             22: ("BackSpace", "BackSpace"),
             36: ("Return", "Return"),
         }
-        with patch.object(X11Backend, "_load_keymap", return_value=keymap), patch(
-            "text_expander.runtime.x11_backend.probe_binary", return_value=True
-        ):
-            self.backend = X11Backend()
+        self.enterContext(patch.object(X11Backend, "_load_keymap", return_value=keymap))
+        self.enterContext(patch("text_expander.runtime.x11_backend.probe_binary", return_value=True))
+        self.backend = X11Backend()
 
     def test_multi_paragraph_expansion_uses_atomic_clipboard_paste(self) -> None:
         multi_paragraph_text = (

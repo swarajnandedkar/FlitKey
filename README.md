@@ -39,7 +39,7 @@
 | **Dependencies** | `python3-pyqt6`, `xdotool`, `xinput`, `x11-xserver-utils`, `xclip` (Linux X11) |
 | **Configuration Path** | `~/.config/flitkey/config.json` (Linux) / `%APPDATA%\flitkey\config.json` (Windows) |
 | **License** | [MIT License](LICENSE) |
-| **Current Version** | `0.6.0` |
+| **Current Version** | `0.6.1` |
 
 ---
 
@@ -93,7 +93,7 @@ FlitKey automatically probes your current desktop session and selects the approp
    ```
 2. Install the package:
    ```bash
-   sudo apt install ./dist/flitkey_0.6.0_all.deb
+   sudo apt install ./dist/flitkey_0.6.1_all.deb
    ```
 3. Run the application:
    ```bash
