@@ -35,7 +35,7 @@
 | **Language** | Python 3.10+ |
 | **GUI Framework** | PyQt6 |
 | **Compatible Platforms** | Linux (X11 & Wayland) and Windows 10/11 (64-bit) |
-| **Supported Displays / Backends** | X11 (`xinput`/`xdotool`), Wayland (Clipboard Fallback), Windows (`SetWindowsHookEx`/`SendInput`) |
+| **Supported Displays / Backends** | X11 (`xinput`/`xdotool`), Wayland (`wtype`/`ydotool`, clipboard fallback), Windows (`SetWindowsHookEx`/`SendInput`) |
 | **Dependencies** | `python3-pyqt6`, `xdotool`, `xinput`, `x11-xserver-utils`, `xclip` (Linux X11) |
 | **Configuration Path** | `~/.config/flitkey/config.json` (Linux) / `%APPDATA%\flitkey\config.json` (Windows) |
 | **License** | [MIT License](LICENSE) |
@@ -47,7 +47,7 @@
 
 * **📦 Built-in Expansion Packs**: Instant 1-click access to curated snippet packs for AI Chatbot prompts, Developers, Designers, Customer Support, DevOps, and Everyday Productivity.
 * **⚡ Typed Keyword Triggers**: Automatically detects typed keywords inline (e.g., `:gcm`, `:stamp`) and expands them immediately.
-* **🔍 Searchable Quick Insert**: Global overlay window (`Ctrl+Shift+Space`) to quickly search, filter, and insert snippets on demand.
+* **🔍 Searchable Quick Insert**: Searchable picker that inserts snippets on demand, most-used first. Bind any desktop keyboard shortcut to `flitkey --picker` to open it from anywhere (works on X11, Wayland, and Windows).
 * **⌨️ Global Hotkeys**: Trigger expansions with customizable key combinations (e.g., `Ctrl+Alt+A`).
 * **🪄 Dynamic Placeholders**: Expand variables like date, time, system clipboard contents, or specify post-expansion cursor placement (`{{cursor}}`).
 * **🔄 Multi-Format Importer**: Easily import existing snippets from **Espanso** (`.yml`), **AutoHotkey** (`.ahk`), **CSV/TSV**, and **JSON**.
@@ -73,13 +73,13 @@ FlitKey automatically probes your current desktop session and selects the approp
 
 | Feature / Session | X11 Desktop | Wayland Desktop | Windows (10/11) | Browser Extension | Technical Mechanism |
 | --- | --- | --- | --- | --- | --- |
-| **Typed Keyword Expansion** | ✅ Yes | ⚠️ Clipboard Mode | ✅ Yes | ✅ Web Inputs | `xinput test-xi2` (Linux) / `SetWindowsHookEx` (Windows) / DOM events |
-| **Global Hotkeys** | ✅ Yes | ⚠️ Restricted | ✅ Yes | ❌ Browser-only | `xdotool` (Linux) / Windows Key Hooks |
-| **Searchable Quick Insert** | ✅ Yes | ✅ Clipboard Mode | ✅ Yes | ✅ Extension Popup | Pastes text or copies to clipboard via `QClipboard` / `SendInput` |
+| **Typed Keyword Expansion** | ✅ Yes | ❌ Needs an X11 session | ✅ Yes | ✅ Web Inputs | `xinput test-xi2` (Linux) / `SetWindowsHookEx` (Windows) / DOM events |
+| **Global Hotkeys** | ✅ Yes | ⚠️ Via desktop shortcut → `flitkey --picker` | ✅ Yes | ❌ Browser-only | `xdotool` (Linux) / Windows Key Hooks |
+| **Searchable Quick Insert** | ✅ Yes | ✅ Types via `wtype`/`ydotool`, else clipboard | ✅ Yes | ✅ Extension Popup | Pastes text or copies to clipboard via `QClipboard` / `SendInput` |
 | **System Tray Controls** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ N/A | PyQt6 `QSystemTrayIcon` |
 | **Autostart at Login** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ N/A | XDG Autostart `.desktop` entry (Linux) / Windows Registry |
 
-> **Note on Wayland:** Wayland's security model isolates applications from monitoring global keystrokes and simulating input. FlitKey gracefully handles Wayland via its **Quick Insert** clipboard workflow: snippets selected from the picker are copied to your clipboard with a desktop notification so you can paste them anywhere.
+> **Note on Wayland:** Wayland's security model stops applications from watching global keystrokes, so typed keywords cannot expand there. The workflow is **Quick Insert** instead: bind a shortcut to `flitkey --picker` in your desktop's keyboard settings (GNOME: Settings → Keyboard → Custom Shortcuts; KDE: System Settings → Shortcuts; Sway/Hyprland: `bindsym`), pick a snippet, and FlitKey types it into the focused window using `wtype` (Sway, Hyprland, KDE) or `ydotool` (GNOME and everything else; `ydotoold` must be running). If neither tool is installed, the snippet is copied to the clipboard instead. Fill-in fields and `{{cursor}}` work in both modes.
 
 ---
 
@@ -131,6 +131,7 @@ FlitKey automatically probes your current desktop session and selects the approp
    ```bash
    python3 run.py --minimized
    ```
+   While FlitKey is running, `python3 run.py --picker` (or `flitkey --picker` from the package) opens Quick Insert in the running instance — bind it to a desktop keyboard shortcut. Launching without flags brings the main window to the front.
 
 6. **Create a local Linux desktop launcher shortcut:**
    ```bash
@@ -220,7 +221,7 @@ Easily migrate from existing text expander utilities. Click the **Import...** bu
 ## Frequently Asked Questions (FAQ) <a id="faq"></a>
 
 ### Does FlitKey support Wayland?
-Yes. While Wayland's security architecture restricts global key sniffing and synthetic text input, FlitKey automatically detects Wayland sessions and provides a clipboard fallback. When you select a snippet in the Quick Insert picker, FlitKey copies it to your clipboard and notifies you, allowing you to paste it anywhere.
+Yes, picker-first. Wayland forbids global key sniffing, so typed `:keyword` expansion needs an X11 session. On Wayland you bind a desktop shortcut to `flitkey --picker`, choose a snippet, and FlitKey types it into the focused window with `wtype` or `ydotool` — or copies it to the clipboard if neither is installed. Global hotkeys per snippet are not available on Wayland.
 
 ### How does cursor positioning (`{{cursor}}`) work?
 On X11, FlitKey types the snippet text and calculates the character count following the `{{cursor}}` marker. It then sends `xdotool key --repeat <count> Left` commands to accurately reposition your caret. On Windows, native input events shift the cursor back accordingly.

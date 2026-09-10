@@ -124,6 +124,12 @@ class AppController(QObject):
         self.window.raise_()
         self.window.activateWindow()
 
+    def handle_remote_command(self, command: str) -> None:
+        if command == "picker":
+            self.open_picker()
+        elif command == "show":
+            self.show_window()
+
     def add_snippet(self) -> None:
         dialog = SnippetDialog(self.window)
         if dialog.exec():
