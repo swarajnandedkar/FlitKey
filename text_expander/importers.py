@@ -8,6 +8,22 @@ from typing import Sequence
 
 from .models import Snippet
 
+MAX_IMPORT_FILE_SIZE = 2 * 1024 * 1024  # 2MB
+MAX_SNIPPET_COUNT = 1000
+MAX_LABEL_LENGTH = 255
+MAX_KEYWORD_LENGTH = 100
+MAX_EXPANSION_LENGTH = 50_000
+
+
+def sanitize_snippet(snippet: Snippet) -> Snippet:
+    """Clamp string fields to safe bounds."""
+    snippet.label = (snippet.label or "").strip()[:MAX_LABEL_LENGTH]
+    if snippet.keyword:
+        snippet.keyword = snippet.keyword[:MAX_KEYWORD_LENGTH]
+    if snippet.expansion_text:
+        snippet.expansion_text = snippet.expansion_text[:MAX_EXPANSION_LENGTH]
+    return snippet
+
 
 def parse_espanso_yaml(content: str) -> list[Snippet]:
     """Parse Espanso YML/YAML configuration files."""
@@ -118,7 +134,7 @@ def parse_autohotkey(content: str) -> list[Snippet]:
         stripped = line.strip()
 
         if in_multiline:
-            if stripped.lower() in ("return", "} "):
+            if stripped.lower() in ("return", "}"):
                 exp = "\n".join(ml_lines)
                 label = f"AHK: {ml_trigger}"
                 if ml_type == "keyword":
@@ -127,6 +143,9 @@ def parse_autohotkey(content: str) -> list[Snippet]:
                     snippets.append(Snippet(label=label, trigger_type="hotkey", hotkey=ml_trigger, expansion_text=exp))
                 in_multiline = False
                 ml_lines = []
+            elif stripped == "{" and not ml_lines:
+                # Skip lone opening brace of a block started on the next line.
+                pass
             else:
                 # Strip Send commands if present
                 clean_line = re.sub(r"^\s*Send(?:Input|Play|Event)?\s*,?\s*", "", line)
@@ -141,10 +160,10 @@ def parse_autohotkey(content: str) -> list[Snippet]:
         if hs_match:
             trigger = hs_match.group("trigger").strip()
             replace = hs_match.group("replace").strip()
-            if replace:
+            if replace and replace != "{":
                 snippets.append(Snippet(label=f"AHK: {trigger}", trigger_type="keyword", keyword=trigger, expansion_text=replace))
             else:
-                # Multi-line hotstring block
+                # Multi-line hotstring block (empty body or brace-opened block)
                 in_multiline = True
                 ml_trigger = trigger
                 ml_type = "keyword"
@@ -156,7 +175,7 @@ def parse_autohotkey(content: str) -> list[Snippet]:
         if hk_match:
             hk = _convert_ahk_hotkey(hk_match.group("hk").strip())
             replace = hk_match.group("replace").strip()
-            if replace:
+            if replace and replace != "{":
                 snippets.append(Snippet(label=f"AHK: {hk}", trigger_type="hotkey", hotkey=hk, expansion_text=replace))
             else:
                 in_multiline = True
@@ -224,15 +243,15 @@ def parse_json_snippets(content: str) -> list[Snippet]:
         data = json.loads(content)
         items = data.get("snippets") if isinstance(data, dict) else data
         if isinstance(items, list):
-            for item in items:
+            for item in items[:MAX_SNIPPET_COUNT]:
                 if isinstance(item, dict):
                     # Check if it's already a FlitKey snippet dict
                     if "label" in item and ("keyword" in item or "hotkey" in item or "trigger" in item):
-                        kw = item.get("keyword") or item.get("trigger") or ""
-                        hk = item.get("hotkey") or ""
-                        tt = item.get("trigger_type") or ("hotkey" if hk else "keyword")
-                        exp = item.get("expansion_text") or item.get("expansion") or item.get("text") or ""
-                        lbl = item.get("label") or f"Import: {kw or hk}"
+                        kw = str(item.get("keyword") or item.get("trigger") or "")
+                        hk = str(item.get("hotkey") or "")
+                        tt = str(item.get("trigger_type") or ("hotkey" if hk else "keyword"))
+                        exp = str(item.get("expansion_text") or item.get("expansion") or item.get("text") or "")
+                        lbl = str(item.get("label") or f"Import: {kw or hk}")
                         snippets.append(Snippet(label=lbl, trigger_type=tt, keyword=kw, hotkey=hk, expansion_text=exp))
     except (json.JSONDecodeError, TypeError, ValueError):
         pass
@@ -240,27 +259,34 @@ def parse_json_snippets(content: str) -> list[Snippet]:
 
 
 def import_snippets_from_file(file_path: Path) -> list[Snippet]:
-    """Detect file type by extension or content and parse snippets."""
+    """Detect file type by extension or content and parse snippets with size & count limits."""
+    if file_path.stat().st_size > MAX_IMPORT_FILE_SIZE:
+        raise ValueError(
+            f"File size ({file_path.stat().st_size} bytes) exceeds maximum limit of {MAX_IMPORT_FILE_SIZE} bytes."
+        )
+
     text = file_path.read_text(encoding="utf-8", errors="replace")
     ext = file_path.suffix.lower()
 
     if ext in (".yml", ".yaml"):
-        return parse_espanso_yaml(text)
+        raw = parse_espanso_yaml(text)
     elif ext == ".ahk":
-        return parse_autohotkey(text)
+        raw = parse_autohotkey(text)
     elif ext == ".csv":
-        return parse_csv_tsv(text, delimiter=",")
+        raw = parse_csv_tsv(text, delimiter=",")
     elif ext == ".tsv":
-        return parse_csv_tsv(text, delimiter="\t")
+        raw = parse_csv_tsv(text, delimiter="\t")
     elif ext == ".json":
-        return parse_json_snippets(text)
+        raw = parse_json_snippets(text)
     else:
         # Autodetect by content
         if "matches:" in text:
-            return parse_espanso_yaml(text)
+            raw = parse_espanso_yaml(text)
         elif "::" in text:
-            return parse_autohotkey(text)
+            raw = parse_autohotkey(text)
         elif text.strip().startswith("{") or text.strip().startswith("["):
-            return parse_json_snippets(text)
+            raw = parse_json_snippets(text)
         else:
-            return parse_csv_tsv(text, delimiter="," if "," in text else "\t")
+            raw = parse_csv_tsv(text, delimiter="," if "," in text else "\t")
+
+    return [sanitize_snippet(s) for s in raw[:MAX_SNIPPET_COUNT]]

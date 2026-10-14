@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QApplication, QFileDialog, QMenu, QMessageBox, QSyst
 
 from .branding import APP_NAME, ICON_FILE
 from .config import delete_state, export_state, import_state, load_state, save_state
+from .gui.excluded_apps_dialog import ExcludedAppsDialog
 from .gui.fill_dialog import FillDialog
 from .gui.main_window import MainWindow
 from .gui.packs_dialog import PacksDialog
@@ -50,6 +51,7 @@ class AppController(QObject):
         self.window.notify_toggled.connect(self.set_notify_on_expansion)
         self.window.picker_requested.connect(self.open_picker)
         self.window.remove_pack_requested.connect(self.remove_pack)
+        self.window.excluded_apps_requested.connect(self.open_excluded_apps)
 
         self.window.start_minimized_checkbox.toggled.connect(self._settings_checkbox_changed)
         self.window.case_sensitive_checkbox.toggled.connect(self._settings_checkbox_changed)
@@ -57,6 +59,7 @@ class AppController(QObject):
         self.backend.status_changed.connect(self._update_status)
         self.backend.snippet_triggered.connect(self._notify_snippet_triggered)
         self.backend.fill_requested.connect(self._fill_and_inject)
+        self.backend.pause_toggled.connect(self.set_paused)
 
         install_launcher()
         if self.settings.autostart:
@@ -96,6 +99,9 @@ class AppController(QObject):
         menu.addAction(picker_action)
         menu.addAction(self.pause_action)
         menu.addSeparator()
+        excluded_action = QAction("Excluded apps…", menu)
+        excluded_action.triggered.connect(self.open_excluded_apps)
+        menu.addAction(excluded_action)
         export_action = QAction("Export data…", menu)
         import_backup_action = QAction("Import backup…", menu)
         delete_data_action = QAction("Delete all data…", menu)
@@ -110,6 +116,8 @@ class AppController(QObject):
         return menu
 
     def _start_backend(self) -> None:
+        self.backend.set_pause_hotkey(self.settings.pause_hotkey)
+        self.backend.set_excluded_apps(self.settings.excluded_apps)
         self.backend.start(self.snippets, self.settings.case_sensitive)
         self.backend.set_paused(self.settings.paused)
         self._sync_pause_action()
@@ -120,9 +128,17 @@ class AppController(QObject):
         self.show_window()
 
     def show_window(self) -> None:
+        self.window.update_snippets(self.snippets)
         self.window.show()
         self.window.raise_()
         self.window.activateWindow()
+
+    def open_excluded_apps(self) -> None:
+        dialog = ExcludedAppsDialog(self.settings.excluded_apps, self.window)
+        if dialog.exec():
+            self.settings.excluded_apps = dialog.get_excluded_apps()
+            self._persist()
+            self.backend.set_excluded_apps(self.settings.excluded_apps)
 
     def handle_remote_command(self, command: str) -> None:
         if command == "picker":
@@ -289,7 +305,7 @@ class AppController(QObject):
             return
         try:
             import_state(Path(source_str))
-        except (OSError, ValueError) as error:
+        except (OSError, ValueError, TypeError, AttributeError) as error:
             QMessageBox.warning(self.window, "Import Backup", f"Import failed:\n{error}")
             return
         self.snippets, self.settings = load_state()
@@ -371,6 +387,8 @@ class AppController(QObject):
         self._persist()
         self.window.update_snippets(self.snippets)
         self.window.update_settings(self.settings)
+        self.backend.set_pause_hotkey(self.settings.pause_hotkey)
+        self.backend.set_excluded_apps(self.settings.excluded_apps)
         self.backend.reload(self.snippets, self.settings.case_sensitive)
 
     def _find_snippet(self, snippet_id: str) -> Snippet | None:
@@ -397,8 +415,10 @@ class AppController(QObject):
     def _record_use(self, snippet: Snippet) -> None:
         snippet.use_count += 1
         self._persist()
-        # Counts don't affect trigger matching, so refresh the table without a backend reload.
-        self.window.update_snippets(self.snippets)
+        # Counts don't affect trigger matching or table row structure,
+        # so update stats in-place to avoid table stutter and lost selection.
+        if self.window.isVisible():
+            self.window.update_snippet_usage(snippet.id, snippet.use_count, self.snippets)
 
     def _notify_snippet_triggered(self, snippet_id: str) -> None:
         snippet = self._find_snippet(snippet_id)
@@ -409,7 +429,8 @@ class AppController(QObject):
             self.tray.showMessage(f"{APP_NAME} expanded a snippet", snippet.label)
 
     def _sync_pause_action(self) -> None:
-        self.pause_action.setText("Resume" if self.settings.paused else "Pause")
+        hotkey_hint = f" ({self.settings.pause_hotkey})" if self.settings.pause_hotkey else ""
+        self.pause_action.setText(f"Resume{hotkey_hint}" if self.settings.paused else f"Pause{hotkey_hint}")
 
     def _tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
         if reason in {QSystemTrayIcon.ActivationReason.Trigger, QSystemTrayIcon.ActivationReason.DoubleClick}:

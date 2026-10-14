@@ -47,6 +47,64 @@ def _parse_payload(payload: dict) -> tuple[list[Snippet], Settings]:
     return snippets, Settings.from_dict(settings_payload)
 
 
+def _validate_snippet_dict(item: dict, index: int) -> None:
+    """Strictly validate one snippet entry from a user-provided backup.
+
+    Missing keys are allowed (older exports); present keys must have the
+    correct JSON type. Raises ValueError describing the first violation.
+    """
+    for key in ("label", "keyword", "hotkey", "expansion_text", "pack_id", "id"):
+        if key in item and not isinstance(item[key], str):
+            raise ValueError(f"Import payload snippet #{index} field '{key}' must be a string.")
+    if "trigger_type" in item and item["trigger_type"] not in ("keyword", "hotkey"):
+        raise ValueError(f"Import payload snippet #{index} field 'trigger_type' must be 'keyword' or 'hotkey'.")
+    if "use_count" in item:
+        value = item["use_count"]
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ValueError(f"Import payload snippet #{index} field 'use_count' must be an integer.")
+        if value < 0:
+            raise ValueError(f"Import payload snippet #{index} field 'use_count' must be >= 0.")
+    for key in ("enabled", "word_boundary"):
+        if key in item and not isinstance(item[key], bool):
+            raise ValueError(f"Import payload snippet #{index} field '{key}' must be a boolean.")
+
+
+def _validate_settings_dict(settings_payload: dict) -> None:
+    """Strictly validate the settings object of a user-provided backup."""
+    for key in ("autostart", "start_minimized", "paused", "case_sensitive", "notify_on_expansion"):
+        if key in settings_payload and not isinstance(settings_payload[key], bool):
+            raise ValueError(f"Import payload settings field '{key}' must be a boolean.")
+    for key in ("wayland_fallback_mode", "pause_hotkey"):
+        if key in settings_payload and not isinstance(settings_payload[key], str):
+            raise ValueError(f"Import payload settings field '{key}' must be a string.")
+    if "excluded_apps" in settings_payload:
+        raw = settings_payload["excluded_apps"]
+        if not isinstance(raw, list) or any(not isinstance(x, str) for x in raw):
+            raise ValueError("Import payload settings field 'excluded_apps' must be a list of strings.")
+
+
+def _validate_import_payload(payload: dict) -> None:
+    """Validate a user-provided backup before it may replace current state.
+
+    Unlike load_state() (which coerces leniently so startup never crashes),
+    imports are rejected with ValueError on any schema or field-type
+    violation so malformed backups are reported, never silently repaired.
+    """
+    raw_snippets = payload.get("snippets", [])
+    if "snippets" in payload and not isinstance(raw_snippets, list):
+        raise ValueError("Import payload 'snippets' must be a list.")
+    if isinstance(raw_snippets, list):
+        for index, item in enumerate(raw_snippets):
+            if not isinstance(item, dict):
+                raise ValueError(f"Import payload snippet #{index} must be an object.")
+            _validate_snippet_dict(item, index)
+    settings_payload = payload.get("settings", {})
+    if "settings" in payload and not isinstance(settings_payload, dict):
+        raise ValueError("Import payload 'settings' must be an object.")
+    if isinstance(settings_payload, dict):
+        _validate_settings_dict(settings_payload)
+
+
 def _xdg_config_home() -> Path:
     return Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
 
@@ -102,7 +160,10 @@ def load_state() -> tuple[list[Snippet], Settings]:
 
     if not isinstance(payload, dict):
         return [], Settings()
-    return _parse_payload(payload)
+    try:
+        return _parse_payload(payload)
+    except (ValueError, TypeError, AttributeError):
+        return [], Settings()
 
 
 def save_state(snippets: list[Snippet], settings: Settings) -> None:
@@ -127,7 +188,11 @@ def import_state(source: Path) -> None:
     # Validate structure
     if not isinstance(payload, dict):
         raise ValueError("Import payload must be a JSON object.")
-    snippets, settings = _parse_payload(payload)
+    _validate_import_payload(payload)
+    try:
+        snippets, settings = _parse_payload(payload)
+    except (ValueError, TypeError, AttributeError) as e:
+        raise ValueError(f"Invalid import payload: {e}")
     # Back up current data so an accidental import can be undone.
     _backup_before_replace()
     atomic_write_json(config_path(), _payload(snippets, settings))

@@ -72,6 +72,7 @@ class Snippet:
     enabled: bool = True
     pack_id: str = ""
     use_count: int = 0
+    word_boundary: bool = False
     id: str = field(default_factory=lambda: str(uuid4()))
 
     def keystrokes_saved_per_use(self) -> int:
@@ -91,20 +92,59 @@ class Snippet:
             "enabled": self.enabled,
             "pack_id": self.pack_id,
             "use_count": self.use_count,
+            "word_boundary": self.word_boundary,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "Snippet":
+        raw_id = data.get("id")
+        try:
+            snippet_id = str(raw_id) if raw_id else str(uuid4())
+        except Exception:
+            snippet_id = str(uuid4())
+
+        raw_label = data.get("label", "")
+        if raw_label is None:
+            raw_label = ""
+        elif not isinstance(raw_label, str):
+            try:
+                raw_label = str(raw_label)
+            except Exception:
+                raw_label = ""
+        label = raw_label.strip()
+
+        trigger_type = data.get("trigger_type", "keyword")
+        if trigger_type not in ("keyword", "hotkey"):
+            trigger_type = "keyword"
+
+        def _safe_str(key: str, default: str = "") -> str:
+            value = data.get(key, default)
+            if value is None:
+                return default
+            if isinstance(value, str):
+                return value
+            try:
+                return str(value)
+            except Exception:
+                return default
+
+        raw_use_count = data.get("use_count", 0)
+        try:
+            use_count = max(int(raw_use_count or 0), 0)
+        except (ValueError, TypeError):
+            use_count = 0
+
         return cls(
-            id=data.get("id") or str(uuid4()),
-            label=data.get("label", "").strip(),
-            trigger_type=data.get("trigger_type", "keyword"),
-            keyword=data.get("keyword", ""),
-            hotkey=data.get("hotkey", ""),
-            expansion_text=data.get("expansion_text", ""),
+            id=snippet_id,
+            label=label,
+            trigger_type=trigger_type,  # type: ignore[arg-type]
+            keyword=_safe_str("keyword"),
+            hotkey=_safe_str("hotkey"),
+            expansion_text=_safe_str("expansion_text"),
             enabled=bool(data.get("enabled", True)),
-            pack_id=str(data.get("pack_id") or ""),
-            use_count=max(int(data.get("use_count") or 0), 0),
+            pack_id=_safe_str("pack_id"),
+            use_count=use_count,
+            word_boundary=bool(data.get("word_boundary", False)),
         )
 
 
@@ -115,6 +155,45 @@ def usage_stats(snippets: list[Snippet]) -> tuple[int, int]:
     return uses, saved
 
 
+DEFAULT_EXCLUDED_APPS: list[str] = [
+    # Password managers & authenticators
+    "keepassxc",
+    "keepass",
+    "1password",
+    "bitwarden",
+    "lastpass",
+    "dashlane",
+    "enpass",
+    "keypass",
+    "authenticator",
+    # Authentication & credential dialogs
+    "pinentry",
+    "polkit",
+    "gcr-prompter",
+    "ssh-askpass",
+    "ksshaskpass",
+    "gnome-keyring",
+    "kwallet",
+    "credentialhelper",
+    "pageant",
+    "winlogon",
+    "logonui",
+    "consent.exe",
+    # Remote access & virtualization
+    "mstsc.exe",
+    "teamviewer",
+    "anydesk",
+    "vncviewer",
+    "remmina",
+    "putty",
+    # Administrative consoles & shells
+    "cmd.exe",
+    "powershell.exe",
+    "powershell_ise.exe",
+    "wt.exe",
+]
+
+
 @dataclass
 class Settings:
     autostart: bool = False
@@ -123,6 +202,8 @@ class Settings:
     case_sensitive: bool = False
     wayland_fallback_mode: str = "hotkeys_and_picker"
     notify_on_expansion: bool = True
+    excluded_apps: list[str] = field(default_factory=lambda: list(DEFAULT_EXCLUDED_APPS))
+    pause_hotkey: str = "Ctrl+Alt+P"
 
     def to_dict(self) -> dict:
         return {
@@ -132,17 +213,34 @@ class Settings:
             "case_sensitive": self.case_sensitive,
             "wayland_fallback_mode": self.wayland_fallback_mode,
             "notify_on_expansion": self.notify_on_expansion,
+            "excluded_apps": list(self.excluded_apps),
+            "pause_hotkey": self.pause_hotkey,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "Settings":
+        raw_excluded = data.get("excluded_apps")
+        if raw_excluded is None or not isinstance(raw_excluded, list):
+            excluded_apps = list(DEFAULT_EXCLUDED_APPS)
+        else:
+            excluded_apps = [str(x).strip() for x in raw_excluded if str(x).strip()]
+
+        raw_pause_hk = str(data.get("pause_hotkey") or "Ctrl+Alt+P").strip()
+        pause_hotkey = normalize_hotkey(raw_pause_hk) or "Ctrl+Alt+P"
+
+        raw_mode = data.get("wayland_fallback_mode", "hotkeys_and_picker")
+        if not isinstance(raw_mode, str) or not raw_mode.strip():
+            raw_mode = "hotkeys_and_picker"
+
         return cls(
             autostart=bool(data.get("autostart", False)),
             start_minimized=bool(data.get("start_minimized", True)),
             paused=bool(data.get("paused", False)),
             case_sensitive=bool(data.get("case_sensitive", False)),
-            wayland_fallback_mode=data.get("wayland_fallback_mode", "hotkeys_and_picker"),
+            wayland_fallback_mode=raw_mode,
             notify_on_expansion=bool(data.get("notify_on_expansion", True)),
+            excluded_apps=excluded_apps,
+            pause_hotkey=pause_hotkey,
         )
 
 
